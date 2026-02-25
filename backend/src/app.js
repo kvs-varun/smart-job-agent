@@ -1,3 +1,4 @@
+import agentRoutes from "./routes/agent.routes.js";
 import express from "express";
 import cors from "cors";
 
@@ -9,5 +10,7 @@ app.use(express.json());
 app.get("/health", (req, res) => {
   res.json({ status: "Agent backend running" });
 });
+
+app.use("/agent", agentRoutes);
 
 export default app;
