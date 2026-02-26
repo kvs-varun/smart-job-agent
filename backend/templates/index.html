@@ -1,0 +1,356 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Smart Job Agent - ATS Resume Generator</title>
+    <style>
+      :root {
+        --bg: #0b1220;
+        --panel: #111a2e;
+        --text: #e8eefc;
+        --muted: #9fb0d0;
+        --accent: #4f8cff;
+        --border: rgba(255, 255, 255, 0.12);
+      }
+      body {
+        margin: 0;
+        font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, "Noto Sans", "Liberation Sans";
+        background: radial-gradient(1200px 800px at 20% 0%, rgba(79, 140, 255, 0.25), transparent),
+          radial-gradient(900px 600px at 80% 0%, rgba(111, 66, 193, 0.22), transparent),
+          var(--bg);
+        color: var(--text);
+      }
+      .container {
+        max-width: 1100px;
+        margin: 0 auto;
+        padding: 28px 18px 60px;
+      }
+      .header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 14px;
+        margin-bottom: 18px;
+      }
+      h1 {
+        font-size: 22px;
+        margin: 0;
+      }
+      .subtitle {
+        margin-top: 6px;
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1.35;
+        max-width: 760px;
+      }
+      .panel {
+        background: rgba(17, 26, 46, 0.82);
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        padding: 14px;
+        backdrop-filter: blur(10px);
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 14px;
+      }
+      label {
+        display: block;
+        font-size: 12px;
+        color: var(--muted);
+        margin-bottom: 6px;
+      }
+      textarea {
+        width: 100%;
+        min-height: 320px;
+        resize: vertical;
+        border-radius: 12px;
+        padding: 10px;
+        border: 1px solid var(--border);
+        background: rgba(0, 0, 0, 0.2);
+        color: var(--text);
+        outline: none;
+        font-size: 13px;
+        line-height: 1.4;
+      }
+      textarea:focus {
+        border-color: rgba(79, 140, 255, 0.6);
+        box-shadow: 0 0 0 4px rgba(79, 140, 255, 0.16);
+      }
+      .actions {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-top: 12px;
+        flex-wrap: wrap;
+      }
+      button {
+        border: 1px solid rgba(79, 140, 255, 0.5);
+        background: linear-gradient(180deg, rgba(79, 140, 255, 0.24), rgba(79, 140, 255, 0.12));
+        color: var(--text);
+        padding: 10px 12px;
+        border-radius: 12px;
+        cursor: pointer;
+        font-size: 13px;
+      }
+      button:disabled {
+        opacity: 0.55;
+        cursor: not-allowed;
+      }
+      .link {
+        color: var(--accent);
+        text-decoration: none;
+        border-bottom: 1px dashed rgba(79, 140, 255, 0.6);
+      }
+      .result {
+        margin-top: 14px;
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 10px;
+      }
+      .pill {
+        display: inline-block;
+        padding: 4px 10px;
+        border: 1px solid var(--border);
+        border-radius: 999px;
+        color: var(--muted);
+        font-size: 12px;
+        margin-right: 8px;
+      }
+      pre {
+        margin: 0;
+        white-space: pre-wrap;
+        word-break: break-word;
+        background: rgba(0, 0, 0, 0.25);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 10px;
+        color: var(--text);
+        font-size: 12px;
+        line-height: 1.4;
+      }
+      .footer {
+        margin-top: 12px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+      @media (max-width: 940px) {
+        .grid {
+          grid-template-columns: 1fr;
+        }
+        textarea {
+          min-height: 260px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <div>
+          <h1>Smart Job Agent - ATS Resume Generator</h1>
+          <div class="subtitle">
+            Paste your resume text and the job description, then generate an ATS-friendly one-page PDF.
+            This tool is designed for personal-use and ethical tailoring (no fake claims).
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="grid">
+          <div>
+            <label for="resumeText">Resume text</label>
+            <textarea id="resumeText" placeholder="Paste your resume text here..."></textarea>
+          </div>
+          <div>
+            <label for="jobDescription">Job description</label>
+            <textarea id="jobDescription" placeholder="Paste the job description here..."></textarea>
+          </div>
+        </div>
+
+        <div class="actions" style="margin-top: 10px;">
+          <div style="flex: 1; min-width: 260px;">
+            <label for="resumeFile">Or upload resume file (PDF / DOCX)</label>
+            <input id="resumeFile" type="file" accept=".pdf,.docx" />
+          </div>
+        </div>
+
+        <div class="actions">
+          <button id="generateBtn">Generate ATS PDF (from text)</button>
+          <button id="generateUploadBtn">Generate ATS PDF (from upload)</button>
+          <span id="status" class="pill">Idle</span>
+          <a id="downloadLink" class="link" href="#" style="display:none;">Download PDF</a>
+        </div>
+
+        <div class="result">
+          <pre id="output" aria-live="polite"></pre>
+          <div class="footer">
+            Note: Match percentage is based on a simple skill overlap list (you can extend the skill taxonomy safely).
+          </div>
+        </div>
+
+        <div class="result" style="margin-top: 18px;">
+          <div style="display:flex; gap: 12px; flex-wrap: wrap; align-items: flex-end;">
+            <div style="min-width: 240px; flex: 1;">
+              <label for="companyName">Company name</label>
+              <input id="companyName" type="text" style="width:100%; padding:10px; border-radius:12px; border:1px solid var(--border); background: rgba(0,0,0,0.2); color: var(--text);" placeholder="e.g., TCS / Infosys / Startup name" />
+            </div>
+            <div style="min-width: 240px; flex: 1;">
+              <label for="roleTitle">Role title</label>
+              <input id="roleTitle" type="text" style="width:100%; padding:10px; border-radius:12px; border:1px solid var(--border); background: rgba(0,0,0,0.2); color: var(--text);" placeholder="e.g., Software Engineer Intern / Junior Backend" />
+            </div>
+            <div style="min-width: 240px; flex: 1;">
+              <label for="candidateName">Your name</label>
+              <input id="candidateName" type="text" style="width:100%; padding:10px; border-radius:12px; border:1px solid var(--border); background: rgba(0,0,0,0.2); color: var(--text);" placeholder="e.g., Rahul Sharma" />
+            </div>
+          </div>
+
+          <div class="actions">
+            <button id="coldEmailBtn">Generate Cold Email + LinkedIn Message</button>
+          </div>
+          <pre id="outreachOutput" aria-live="polite"></pre>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const generateBtn = document.getElementById('generateBtn');
+      const generateUploadBtn = document.getElementById('generateUploadBtn');
+      const statusEl = document.getElementById('status');
+      const outputEl = document.getElementById('output');
+      const downloadLink = document.getElementById('downloadLink');
+      const outreachOutputEl = document.getElementById('outreachOutput');
+      const coldEmailBtn = document.getElementById('coldEmailBtn');
+
+      function setStatus(text) {
+        statusEl.textContent = text;
+      }
+
+      generateBtn.addEventListener('click', async () => {
+        const resumeText = document.getElementById('resumeText').value;
+        const jobDescription = document.getElementById('jobDescription').value;
+
+        outputEl.textContent = '';
+        downloadLink.style.display = 'none';
+        downloadLink.href = '#';
+
+        if (!resumeText.trim() || !jobDescription.trim()) {
+          outputEl.textContent = 'Error: resumeText and jobDescription are required.';
+          return;
+        }
+
+        setStatus('Generating...');
+        generateBtn.disabled = true;
+
+        try {
+          const res = await fetch('/agent/generate-resume', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ resumeText, jobDescription })
+          });
+
+          const data = await res.json();
+          outputEl.textContent = JSON.stringify(data, null, 2);
+
+          if (res.ok && data.download_url) {
+            downloadLink.href = data.download_url;
+            downloadLink.style.display = 'inline-block';
+          }
+
+          setStatus(res.ok ? 'Done' : 'Error');
+        } catch (e) {
+          setStatus('Error');
+          outputEl.textContent = String(e);
+        } finally {
+          generateBtn.disabled = false;
+        }
+      });
+
+      generateUploadBtn.addEventListener('click', async () => {
+        const jobDescription = document.getElementById('jobDescription').value;
+        const resumeFile = document.getElementById('resumeFile').files[0];
+
+        outputEl.textContent = '';
+        downloadLink.style.display = 'none';
+        downloadLink.href = '#';
+
+        if (!resumeFile || !jobDescription.trim()) {
+          outputEl.textContent = 'Error: resumeFile and jobDescription are required.';
+          return;
+        }
+
+        setStatus('Uploading...');
+        generateUploadBtn.disabled = true;
+        generateBtn.disabled = true;
+
+        try {
+          const form = new FormData();
+          form.append('resumeFile', resumeFile);
+          form.append('jobDescription', jobDescription);
+
+          const res = await fetch('/agent/generate-resume-upload', {
+            method: 'POST',
+            body: form
+          });
+
+          const data = await res.json();
+          outputEl.textContent = JSON.stringify(data, null, 2);
+
+          if (res.ok && data.download_url) {
+            downloadLink.href = data.download_url;
+            downloadLink.style.display = 'inline-block';
+          }
+
+          setStatus(res.ok ? 'Done' : 'Error');
+        } catch (e) {
+          setStatus('Error');
+          outputEl.textContent = String(e);
+        } finally {
+          generateUploadBtn.disabled = false;
+          generateBtn.disabled = false;
+        }
+      });
+
+      coldEmailBtn.addEventListener('click', async () => {
+        const jobDescription = document.getElementById('jobDescription').value;
+        const companyName = document.getElementById('companyName').value;
+        const roleTitle = document.getElementById('roleTitle').value;
+        const candidateName = document.getElementById('candidateName').value;
+
+        outreachOutputEl.textContent = '';
+
+        if (!jobDescription.trim() || !companyName.trim() || !roleTitle.trim()) {
+          outreachOutputEl.textContent = 'Error: jobDescription, companyName, and roleTitle are required.';
+          return;
+        }
+
+        setStatus('Generating outreach...');
+        coldEmailBtn.disabled = true;
+
+        try {
+          const res = await fetch('/agent/generate-cold-email', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              jobDescription,
+              companyName,
+              roleTitle,
+              candidateName
+            })
+          });
+
+          const data = await res.json();
+          outreachOutputEl.textContent = JSON.stringify(data, null, 2);
+          setStatus(res.ok ? 'Done' : 'Error');
+        } catch (e) {
+          setStatus('Error');
+          outreachOutputEl.textContent = String(e);
+        } finally {
+          coldEmailBtn.disabled = false;
+        }
+      });
+    </script>
+  </body>
+</html>
