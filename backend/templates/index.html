@@ -336,12 +336,18 @@
               <label for="candidateName">Your name</label>
               <input id="candidateName" type="text" style="width:100%; padding:10px; border-radius:12px; border:1px solid var(--border); background: rgba(0,0,0,0.2); color: var(--text);" placeholder="e.g., Rahul Sharma" />
             </div>
+            <div style="min-width: 240px; flex: 1;">
+              <label for="recruiterEmail">Recruiter email (optional)</label>
+              <input id="recruiterEmail" type="email" style="width:100%; padding:10px; border-radius:12px; border:1px solid var(--border); background: rgba(0,0,0,0.2); color: var(--text);" placeholder="e.g., recruiter@company.com" />
+            </div>
           </div>
 
           <div class="actions">
             <button id="coldEmailBtn">Generate Outreach</button>
             <button id="copyEmailBtn" class="ghost">Copy email</button>
             <button id="copyLinkedinBtn" class="ghost">Copy LinkedIn</button>
+            <a id="mailtoLink" class="link" href="#" style="display:none;">Open in Email</a>
+            <a id="gmailLink" class="link" href="#" style="display:none;" target="_blank" rel="noopener">Open in Gmail</a>
           </div>
 
           <div class="card">
@@ -369,6 +375,8 @@
       const copyLinkedinBtn = document.getElementById('copyLinkedinBtn');
       const emailBodyEl = document.getElementById('emailBody');
       const linkedinMsgEl = document.getElementById('linkedinMsg');
+      const mailtoLinkEl = document.getElementById('mailtoLink');
+      const gmailLinkEl = document.getElementById('gmailLink');
       const resumeFileEl = document.getElementById('resumeFile');
 
       const matchPctEl = document.getElementById('matchPct');
@@ -621,9 +629,14 @@
         const companyName = document.getElementById('companyName').value;
         const roleTitle = document.getElementById('roleTitle').value;
         const candidateName = document.getElementById('candidateName').value;
+        const recruiterEmail = document.getElementById('recruiterEmail').value;
 
         emailBodyEl.value = '';
         linkedinMsgEl.value = '';
+        mailtoLinkEl.style.display = 'none';
+        gmailLinkEl.style.display = 'none';
+        mailtoLinkEl.href = '#';
+        gmailLinkEl.href = '#';
 
         if (!approvedResumeJson) {
           showError('Error: Preview a resume first (Step 2).');
@@ -646,7 +659,8 @@
               jobDescription,
               companyName,
               roleTitle,
-              candidateName
+              candidateName,
+              recruiterEmail
             })
           });
 
@@ -654,6 +668,14 @@
           const out = data.outreach || {};
           emailBodyEl.value = out.cold_email || '';
           linkedinMsgEl.value = out.linkedin_message || '';
+          if (data.mailto) {
+            mailtoLinkEl.href = data.mailto;
+            mailtoLinkEl.style.display = 'inline-block';
+          }
+          if (data.gmail_url) {
+            gmailLinkEl.href = data.gmail_url;
+            gmailLinkEl.style.display = 'inline-block';
+          }
           setStatus(res.ok ? 'Done' : 'Error');
         } catch (e) {
           setStatus('Error');

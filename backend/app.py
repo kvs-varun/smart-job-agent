@@ -17,6 +17,7 @@ try:
     from .resume_parser import parse_resume_text_to_json
     from .resume_loader import extract_text_from_upload
     from .analytics import track_event, summarize_events
+    from .billing_stub import billing_bp
 except ImportError:
     from agent_controller import run_agent_pipeline, run_agent_pipeline_from_file
     from agent_reasoner import analyze_match, generate_resume_actions
@@ -26,10 +27,13 @@ except ImportError:
     from resume_parser import parse_resume_text_to_json
     from resume_loader import extract_text_from_upload
     from analytics import track_event, summarize_events
+    from billing_stub import billing_bp
 app = Flask(__name__)
 
 if CORS:
     CORS(app)
+
+app.register_blueprint(billing_bp)
 
 
 _RATE = {}
@@ -222,6 +226,15 @@ def finalize_resume():
 
     job_analysis = data.get("job_analysis", {}) or {}
 
+    try:
+        track_event(
+            db_path=os.path.join(os.path.dirname(__file__), "data", "events.json"),
+            event_type="user_edit_accepted",
+            payload={"has_job_analysis": bool(job_analysis)},
+        )
+    except Exception:
+        pass
+
     gate = check_resume_quality(approved, job_analysis)
     if not gate.get("passed"):
         return jsonify({"error": "quality_gate_failed", "quality_gate": gate}), 400
@@ -234,6 +247,15 @@ def finalize_resume():
         candidate_name=approved.get("name"),
     )
     download_url = f"/static/generated/{os.path.basename(pdf_path)}"
+
+    try:
+        track_event(
+            db_path=os.path.join(os.path.dirname(__file__), "data", "events.json"),
+            event_type="final_pdf_generated",
+            payload={"filename": os.path.basename(pdf_path)},
+        )
+    except Exception:
+        pass
 
     return jsonify({
         "message": "Final PDF generated",
@@ -282,6 +304,7 @@ def generate_cold_email():
     company = data.get("companyName", "")
     role = data.get("roleTitle", "")
     candidate = data.get("candidateName", "")
+    recruiter_email = (data.get("recruiterEmail") or "").strip()
     projects = data.get("keyProjects", "")
 
     if not job or not company or not role:
@@ -304,7 +327,27 @@ def generate_cold_email():
     except Exception:
         pass
 
-    return jsonify({"message": "Outreach generated", "outreach": messages})
+    # Convenience links
+    subject = f"Application for {role} — {candidate or 'Your Name'}"
+    body = messages.get("cold_email", "")
+    try:
+        from urllib.parse import quote
+    except Exception:
+        quote = None
+
+    mailto = None
+    gmail_url = None
+    if quote:
+        to_part = recruiter_email
+        mailto = f"mailto:{to_part}?subject={quote(subject)}&body={quote(body)}"
+        gmail_url = f"https://mail.google.com/mail/?view=cm&fs=1&to={quote(to_part)}&su={quote(subject)}&body={quote(body)}"
+
+    return jsonify({
+        "message": "Outreach generated",
+        "outreach": messages,
+        "mailto": mailto,
+        "gmail_url": gmail_url,
+    })
 
 
 @app.route("/analytics/summary", methods=["GET"])
