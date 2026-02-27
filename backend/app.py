@@ -16,6 +16,7 @@ try:
     from .agent_pipeline import process_resume_from_text, process_resume_from_upload
     from .resume_parser import parse_resume_text_to_json
     from .resume_loader import extract_text_from_upload
+    from .analytics import track_event, summarize_events
 except ImportError:
     from agent_controller import run_agent_pipeline, run_agent_pipeline_from_file
     from agent_reasoner import analyze_match, generate_resume_actions
@@ -24,6 +25,7 @@ except ImportError:
     from agent_pipeline import process_resume_from_text, process_resume_from_upload
     from resume_parser import parse_resume_text_to_json
     from resume_loader import extract_text_from_upload
+    from analytics import track_event, summarize_events
 app = Flask(__name__)
 
 if CORS:
@@ -92,6 +94,14 @@ def generate_resume():
         return jsonify({"error": "resumeText and jobDescription are required"}), 400
 
     role_pref = data.get("role_preference", "auto")
+    try:
+        track_event(
+            db_path=os.path.join(os.path.dirname(__file__), "data", "events.json"),
+            event_type="generate_attempt",
+            payload={"input": "text", "role_preference": role_pref},
+        )
+    except Exception:
+        pass
     report = process_resume_from_text(resume_text=resume, job_text=job, role_preference=role_pref)
     return jsonify({"message": "ATS resume generated", **report})
 
@@ -100,6 +110,14 @@ def generate_resume():
 def download_resume(filename: str):
     # Security: only serve files from the known generated directory.
     output_dir = os.path.join(os.path.dirname(__file__), "generated")
+    try:
+        track_event(
+            db_path=os.path.join(os.path.dirname(__file__), "data", "events.json"),
+            event_type="pdf_download",
+            payload={"filename": filename},
+        )
+    except Exception:
+        pass
     return send_from_directory(output_dir, filename, as_attachment=True)
 
 
@@ -150,6 +168,14 @@ def generate_resume_upload():
     f.save(uploaded_path)
 
     role_pref = request.form.get("role_preference", "auto")
+    try:
+        track_event(
+            db_path=os.path.join(os.path.dirname(__file__), "data", "events.json"),
+            event_type="generate_attempt",
+            payload={"input": "upload", "role_preference": role_pref, "filename": f.filename},
+        )
+    except Exception:
+        pass
     report = process_resume_from_upload(file_storage=f, job_text=job, role_preference=role_pref)
     return jsonify({"message": "ATS resume generated from upload", **report})
 
@@ -177,7 +203,28 @@ def generate_cold_email():
         key_projects=projects,
     )
 
+    try:
+        track_event(
+            db_path=os.path.join(os.path.dirname(__file__), "data", "events.json"),
+            event_type="outreach_generated",
+            payload={"company": company, "role": role},
+        )
+    except Exception:
+        pass
+
     return jsonify({"message": "Outreach generated", "outreach": messages})
+
+
+@app.route("/analytics/summary", methods=["GET"])
+def analytics_summary():
+    token = os.getenv("SMART_JOB_AGENT_ANALYTICS_TOKEN")
+    if token:
+        given = request.headers.get("X-Analytics-Token")
+        if given != token:
+            return jsonify({"error": "unauthorized"}), 401
+
+    db_path = os.path.join(os.path.dirname(__file__), "data", "events.json")
+    return jsonify(summarize_events(db_path))
 
 
 @app.route("/tracker/add", methods=["POST"])
