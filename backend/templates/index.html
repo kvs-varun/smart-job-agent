@@ -119,6 +119,62 @@
         font-size: 12px;
         margin-right: 8px;
       }
+      .steps {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        margin-top: 10px;
+      }
+      .step {
+        padding: 6px 10px;
+        border-radius: 999px;
+        border: 1px solid var(--border);
+        color: var(--muted);
+        font-size: 12px;
+      }
+      .step.active {
+        border-color: rgba(79, 140, 255, 0.7);
+        color: var(--text);
+        box-shadow: 0 0 0 3px rgba(79, 140, 255, 0.14);
+      }
+      .row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 14px;
+      }
+      .card {
+        background: rgba(0, 0, 0, 0.18);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 10px;
+      }
+      .metric {
+        font-size: 22px;
+        font-weight: 700;
+        margin-top: 4px;
+      }
+      .small {
+        font-size: 12px;
+        color: var(--muted);
+      }
+      .list {
+        margin: 0;
+        padding-left: 16px;
+        color: var(--text);
+        font-size: 13px;
+        line-height: 1.45;
+      }
+      .toolbar {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        align-items: center;
+        margin-top: 10px;
+      }
+      .ghost {
+        border: 1px solid var(--border);
+        background: rgba(0, 0, 0, 0.15);
+      }
       pre {
         margin: 0;
         white-space: pre-wrap;
@@ -159,6 +215,13 @@
       </div>
 
       <div class="panel">
+        <div class="steps" aria-label="Progress">
+          <div id="step1" class="step active">Step 1: Provide Resume + JD</div>
+          <div id="step2" class="step">Step 2: Preview & Review</div>
+          <div id="step3" class="step">Step 3: Edit & Approve</div>
+          <div id="step4" class="step">Step 4: Finalize PDF</div>
+        </div>
+
         <div class="grid">
           <div>
             <label for="resumeText">Resume text</label>
@@ -179,15 +242,58 @@
 
         <div class="actions">
           <button id="previewTextBtn">Preview (parse + analyze)</button>
-          <button id="generateBtn">Generate ATS PDF (from text)</button>
+          <button id="generateBtn" style="display:none;">Generate ATS PDF (from text)</button>
           <button id="previewUploadBtn">Preview Upload (parse + analyze)</button>
-          <button id="generateUploadBtn">Generate ATS PDF (from upload)</button>
+          <button id="generateUploadBtn" style="display:none;">Generate ATS PDF (from upload)</button>
           <span id="status" class="pill">Idle</span>
           <a id="downloadLink" class="link" href="#" style="display:none;">Download PDF</a>
         </div>
 
         <div class="result">
-          <pre id="output" aria-live="polite"></pre>
+          <div class="row">
+            <div class="card">
+              <div class="small">Match %</div>
+              <div id="matchPct" class="metric">--</div>
+              <div class="small">Based on skill overlap (with synonyms)</div>
+            </div>
+            <div class="card">
+              <div class="small">ATS alignment score</div>
+              <div id="atsScore" class="metric">--</div>
+              <div class="small">Format + section completeness + keywords</div>
+            </div>
+          </div>
+
+          <div class="row">
+            <div class="card">
+              <div class="small">Matched skills</div>
+              <ul id="matchedSkills" class="list"></ul>
+              <div class="toolbar">
+                <button id="copyMatchedBtn" class="ghost">Copy</button>
+              </div>
+            </div>
+            <div class="card">
+              <div class="small">Missing skills (Exposure only)</div>
+              <ul id="missingSkills" class="list"></ul>
+              <div class="toolbar">
+                <button id="copyMissingBtn" class="ghost">Copy</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="small">Quality gate</div>
+            <div class="toolbar">
+              <span id="gateStatus" class="pill">--</span>
+              <span class="small" id="gateMeta"></span>
+              <button id="copySuggestionsBtn" class="ghost">Copy suggestions</button>
+            </div>
+            <ul id="gateSuggestions" class="list"></ul>
+          </div>
+
+          <div class="card" id="errorBox" style="display:none;">
+            <div class="small">Error</div>
+            <div id="errorText" style="white-space:pre-wrap; font-size: 13px;"></div>
+          </div>
           <div class="footer">
             Note: Match percentage is based on a simple skill overlap list (you can extend the skill taxonomy safely).
           </div>
@@ -216,6 +322,7 @@
         </div>
 
         <div class="result" style="margin-top: 18px;">
+          <div class="pill">Outreach (copy/paste)</div>
           <div style="display:flex; gap: 12px; flex-wrap: wrap; align-items: flex-end;">
             <div style="min-width: 240px; flex: 1;">
               <label for="companyName">Company name</label>
@@ -223,7 +330,7 @@
             </div>
             <div style="min-width: 240px; flex: 1;">
               <label for="roleTitle">Role title</label>
-              <input id="roleTitle" type="text" style="width:100%; padding:10px; border-radius:12px; border:1px solid var(--border); background: rgba(0,0,0,0.2); color: var(--text);" placeholder="e.g., Software Engineer Intern / Junior Backend" />
+              <input id="roleTitle" type="text" style="width:100%; padding:10px; border-radius:12px; border:1px solid var(--border); background: rgba(0,0,0,0.2); color: var(--text);" placeholder="e.g., Software Engineer / Associate Engineer" />
             </div>
             <div style="min-width: 240px; flex: 1;">
               <label for="candidateName">Your name</label>
@@ -232,9 +339,20 @@
           </div>
 
           <div class="actions">
-            <button id="coldEmailBtn">Generate Cold Email + LinkedIn Message</button>
+            <button id="coldEmailBtn">Generate Outreach</button>
+            <button id="copyEmailBtn" class="ghost">Copy email</button>
+            <button id="copyLinkedinBtn" class="ghost">Copy LinkedIn</button>
           </div>
-          <pre id="outreachOutput" aria-live="polite"></pre>
+
+          <div class="card">
+            <div class="small">Email (≤150 words)</div>
+            <textarea id="emailBody" style="min-height: 140px;" placeholder="Generate outreach after preview..."></textarea>
+          </div>
+
+          <div class="card">
+            <div class="small">LinkedIn message (≤300 chars)</div>
+            <textarea id="linkedinMsg" style="min-height: 90px;" placeholder="Generate outreach after preview..."></textarea>
+          </div>
         </div>
       </div>
     </div>
@@ -245,11 +363,32 @@
       const generateUploadBtn = document.getElementById('generateUploadBtn');
       const previewUploadBtn = document.getElementById('previewUploadBtn');
       const statusEl = document.getElementById('status');
-      const outputEl = document.getElementById('output');
       const downloadLink = document.getElementById('downloadLink');
-      const outreachOutputEl = document.getElementById('outreachOutput');
       const coldEmailBtn = document.getElementById('coldEmailBtn');
+      const copyEmailBtn = document.getElementById('copyEmailBtn');
+      const copyLinkedinBtn = document.getElementById('copyLinkedinBtn');
+      const emailBodyEl = document.getElementById('emailBody');
+      const linkedinMsgEl = document.getElementById('linkedinMsg');
       const resumeFileEl = document.getElementById('resumeFile');
+
+      const matchPctEl = document.getElementById('matchPct');
+      const atsScoreEl = document.getElementById('atsScore');
+      const matchedSkillsEl = document.getElementById('matchedSkills');
+      const missingSkillsEl = document.getElementById('missingSkills');
+      const gateStatusEl = document.getElementById('gateStatus');
+      const gateMetaEl = document.getElementById('gateMeta');
+      const gateSuggestionsEl = document.getElementById('gateSuggestions');
+      const errorBoxEl = document.getElementById('errorBox');
+      const errorTextEl = document.getElementById('errorText');
+
+      const copyMatchedBtn = document.getElementById('copyMatchedBtn');
+      const copyMissingBtn = document.getElementById('copyMissingBtn');
+      const copySuggestionsBtn = document.getElementById('copySuggestionsBtn');
+
+      const step1El = document.getElementById('step1');
+      const step2El = document.getElementById('step2');
+      const step3El = document.getElementById('step3');
+      const step4El = document.getElementById('step4');
 
       const editSummaryEl = document.getElementById('editSummary');
       const editSkillsEl = document.getElementById('editSkills');
@@ -260,9 +399,32 @@
       let lastJobAnalysis = null;
       let approvedResumeJson = null;
 
+      function setStep(n) {
+        const steps = [step1El, step2El, step3El, step4El];
+        steps.forEach((el, idx) => {
+          if (!el) return;
+          el.classList.toggle('active', idx === (n - 1));
+        });
+      }
+
       function setStatus(text) {
         statusEl.textContent = text;
       }
+
+      function setPrereqState(previewReady) {
+        finalizeBtn.disabled = !previewReady;
+        coldEmailBtn.disabled = !previewReady;
+        copyEmailBtn.disabled = !previewReady;
+        copyLinkedinBtn.disabled = !previewReady;
+        copyMatchedBtn.disabled = !previewReady;
+        copyMissingBtn.disabled = !previewReady;
+        copySuggestionsBtn.disabled = !previewReady;
+      }
+
+      // Initial state
+      setStep(1);
+      clearPanels();
+      setPrereqState(false);
 
       function setMutualExclusion() {
         const resumeText = document.getElementById('resumeText').value;
@@ -323,12 +485,16 @@
         const jobDescription = document.getElementById('jobDescription').value;
 
         if (!resumeText.trim()) {
-          outputEl.textContent = 'Error: resumeText is required for preview.';
+          showError('Error: resumeText is required for preview.');
           return;
         }
 
-        setStatus('Parsing...');
+        clearPanels();
+        setPrereqState(false);
+        setStep(2);
+        setStatus('Step 2: Parsing & analyzing...');
         previewTextBtn.disabled = true;
+        finalizeBtn.disabled = true;
         try {
           const res = await fetch('/agent/preview-resume-text', {
             method: 'POST',
@@ -336,13 +502,21 @@
             body: JSON.stringify({ resumeText, jobDescription, role_preference: 'auto' })
           });
           const data = await res.json();
-          outputEl.textContent = JSON.stringify(data.analysis || data, null, 2);
+          if (!res.ok) {
+            showError(data.error ? JSON.stringify(data, null, 2) : 'Preview failed');
+            setStatus('Error');
+            return;
+          }
+
           lastJobAnalysis = (data.analysis && data.analysis.job_analysis) ? data.analysis.job_analysis : null;
           populateEditors(data.resume_preview);
-          setStatus(res.ok ? 'Ready (preview)' : 'Error');
+          renderAnalysis(data.analysis);
+          setPrereqState(true);
+          setStep(3);
+          setStatus('Step 3: Review & edit, then approve');
         } catch (e) {
           setStatus('Error');
-          outputEl.textContent = String(e);
+          showError(String(e));
         } finally {
           previewTextBtn.disabled = false;
         }
@@ -353,12 +527,15 @@
         const resumeFile = resumeFileEl.files[0];
 
         if (!resumeFile) {
-          outputEl.textContent = 'Error: resumeFile is required for preview.';
+          showError('Error: resumeFile is required for preview.');
           return;
         }
 
-        setStatus('Parsing...');
+        clearPanels();
+        setStep(2);
+        setStatus('Step 2: Parsing & analyzing...');
         previewUploadBtn.disabled = true;
+        finalizeBtn.disabled = true;
         try {
           const form = new FormData();
           form.append('resumeFile', resumeFile);
@@ -366,13 +543,21 @@
 
           const res = await fetch('/agent/preview-resume-upload', { method: 'POST', body: form });
           const data = await res.json();
-          outputEl.textContent = JSON.stringify(data.analysis || data, null, 2);
+          if (!res.ok) {
+            showError(data.error ? JSON.stringify(data, null, 2) : 'Preview failed');
+            setStatus('Error');
+            return;
+          }
+
           lastJobAnalysis = (data.analysis && data.analysis.job_analysis) ? data.analysis.job_analysis : null;
           populateEditors(data.resume_preview);
-          setStatus(res.ok ? 'Ready (preview)' : 'Error');
+          renderAnalysis(data.analysis);
+          setPrereqState(true);
+          setStep(3);
+          setStatus('Step 3: Review & edit, then approve');
         } catch (e) {
           setStatus('Error');
-          outputEl.textContent = String(e);
+          showError(String(e));
         } finally {
           previewUploadBtn.disabled = false;
         }
@@ -386,11 +571,12 @@
         finalDownloadLink.href = '#';
 
         if (!approvedResumeJson) {
-          outputEl.textContent = 'Error: Preview a resume first.';
+          showError('Error: Preview a resume first.');
           return;
         }
 
-        setStatus('Generating PDF...');
+        setStep(4);
+        setStatus('Step 4: Validating & generating PDF...');
         finalizeBtn.disabled = true;
         try {
           const approved = readApprovedFromEditors();
@@ -403,104 +589,32 @@
             })
           });
           const data = await res.json();
-          outputEl.textContent = JSON.stringify(data, null, 2);
+          if (!res.ok) {
+            showError(data.error ? JSON.stringify(data, null, 2) : 'Finalize failed');
+            setStatus('Error');
+            setStep(3);
+            return;
+          }
           if (res.ok && data.download_url) {
             finalDownloadLink.href = data.download_url;
             finalDownloadLink.style.display = 'inline-block';
           }
-          setStatus(res.ok ? 'Ready' : 'Error');
+          setStatus('Ready');
         } catch (e) {
           setStatus('Error');
-          outputEl.textContent = String(e);
+          showError(String(e));
         } finally {
           finalizeBtn.disabled = false;
         }
       });
 
-      generateBtn.addEventListener('click', async () => {
-        const resumeText = document.getElementById('resumeText').value;
-        const jobDescription = document.getElementById('jobDescription').value;
-
-        outputEl.textContent = '';
-        downloadLink.style.display = 'none';
-        downloadLink.href = '#';
-
-        if (!resumeText.trim() || !jobDescription.trim()) {
-          outputEl.textContent = 'Error: resumeText and jobDescription are required.';
-          return;
-        }
-
-        setStatus('Generating...');
-        generateBtn.disabled = true;
-
-        try {
-          const res = await fetch('/agent/generate-resume', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ resumeText, jobDescription })
-          });
-
-          const data = await res.json();
-          outputEl.textContent = JSON.stringify(data, null, 2);
-
-          if (res.ok && data.download_url) {
-            downloadLink.href = data.download_url;
-            downloadLink.style.display = 'inline-block';
-          }
-
-          setStatus(res.ok ? 'Done' : 'Error');
-        } catch (e) {
-          setStatus('Error');
-          outputEl.textContent = String(e);
-        } finally {
-          generateBtn.disabled = false;
-        }
+      copySuggestionsBtn.addEventListener('click', () => {
+        const items = Array.from(gateSuggestionsEl.querySelectorAll('li')).map(li => li.textContent);
+        copyText(items.join('\n'));
       });
 
-      generateUploadBtn.addEventListener('click', async () => {
-        const jobDescription = document.getElementById('jobDescription').value;
-        const resumeFile = document.getElementById('resumeFile').files[0];
-
-        outputEl.textContent = '';
-        downloadLink.style.display = 'none';
-        downloadLink.href = '#';
-
-        if (!resumeFile || !jobDescription.trim()) {
-          outputEl.textContent = 'Error: resumeFile and jobDescription are required.';
-          return;
-        }
-
-        setStatus('Uploading...');
-        generateUploadBtn.disabled = true;
-        generateBtn.disabled = true;
-
-        try {
-          const form = new FormData();
-          form.append('resumeFile', resumeFile);
-          form.append('jobDescription', jobDescription);
-
-          const res = await fetch('/agent/generate-resume-upload', {
-            method: 'POST',
-            body: form
-          });
-
-          const data = await res.json();
-          outputEl.textContent = JSON.stringify(data, null, 2);
-
-          if (res.ok && data.download_url) {
-            downloadLink.href = data.download_url;
-            downloadLink.style.display = 'inline-block';
-          }
-
-          setStatus(res.ok ? 'Done' : 'Error');
-        } catch (e) {
-          setStatus('Error');
-          outputEl.textContent = String(e);
-        } finally {
-          generateUploadBtn.disabled = false;
-          generateBtn.disabled = false;
-        }
-      });
+      copyEmailBtn.addEventListener('click', () => copyText(emailBodyEl.value || ''));
+      copyLinkedinBtn.addEventListener('click', () => copyText(linkedinMsgEl.value || ''));
 
       coldEmailBtn.addEventListener('click', async () => {
         const jobDescription = document.getElementById('jobDescription').value;
@@ -508,10 +622,16 @@
         const roleTitle = document.getElementById('roleTitle').value;
         const candidateName = document.getElementById('candidateName').value;
 
-        outreachOutputEl.textContent = '';
+        emailBodyEl.value = '';
+        linkedinMsgEl.value = '';
+
+        if (!approvedResumeJson) {
+          showError('Error: Preview a resume first (Step 2).');
+          return;
+        }
 
         if (!jobDescription.trim() || !companyName.trim() || !roleTitle.trim()) {
-          outreachOutputEl.textContent = 'Error: jobDescription, companyName, and roleTitle are required.';
+          showError('Error: jobDescription, companyName, and roleTitle are required.');
           return;
         }
 
@@ -531,11 +651,13 @@
           });
 
           const data = await res.json();
-          outreachOutputEl.textContent = JSON.stringify(data, null, 2);
+          const out = data.outreach || {};
+          emailBodyEl.value = out.cold_email || '';
+          linkedinMsgEl.value = out.linkedin_message || '';
           setStatus(res.ok ? 'Done' : 'Error');
         } catch (e) {
           setStatus('Error');
-          outreachOutputEl.textContent = String(e);
+          showError(String(e));
         } finally {
           coldEmailBtn.disabled = false;
         }
