@@ -1,0 +1,14 @@
+{
+  "version": "1.0",
+  "constraints": {
+    "cold_email_max_words": 150,
+    "linkedin_max_chars": 300
+  },
+  "templates": {
+    "cold_email": {
+      "subject": "Application for {{role}} — {{candidate_name}}",
+      "body": "Hi {{recruiter_name}},\n\nI’m {{candidate_name}}, a fresher applying for the {{role}} role at {{company}}. My relevant strengths include {{skill_cluster}} and I’ve worked on {{project_highlight}}.\n\nIf helpful, I can share a tailored one-page ATS resume and project links. I’d appreciate the opportunity to interview.\n\nRegards,\n{{candidate_name}}"
+    },
+    "linkedin": "Hi {{recruiter_name}}, I’m {{candidate_name}}. I’m applying for the {{role}} role at {{company}}. I have project experience in {{skill_cluster}}. Could I share my resume/portfolio?"
+  }
+}

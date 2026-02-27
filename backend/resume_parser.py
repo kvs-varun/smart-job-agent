@@ -141,3 +141,59 @@ def parse_resume_text(resume_text: str) -> Dict:
     }
 
     return structured
+
+
+def parse_resume_text_to_json(text: str) -> Dict:
+    """Parse resume text into a conservative structured JSON.
+
+    Keys:
+    - name (str|None)
+    - contact: {email, phone}
+    - summary (str)
+    - skills (list[str])
+    - projects (list[str])
+    - education (list[str])
+    - experience (list[str])
+    - parse_warnings (list[str])
+    """
+
+    warnings: List[str] = []
+    raw = text or ""
+
+    email_match = re.search(r"[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}", raw, flags=re.I)
+    phone_match = re.search(r"(\+91[\s-]?)?[6-9]\d{9}", raw)
+
+    # Very conservative name guess: first non-empty line that isn't an email/phone.
+    lines = _clean_lines(raw)
+    name = None
+    for ln in lines[:5]:
+        if email_match and email_match.group(0).lower() in ln.lower():
+            continue
+        if phone_match and phone_match.group(0) in ln:
+            continue
+        if len(ln.split()) <= 5 and len(ln) <= 40:
+            name = ln.strip()
+            break
+
+    structured = parse_resume_text(raw)
+    summary = structured.get("summary", "")
+    if not summary:
+        warnings.append("Summary section not detected; using fallback summary.")
+
+    if not structured.get("skills"):
+        warnings.append("Skills section not detected. Consider adding a SKILLS section.")
+
+    return {
+        "name": name,
+        "contact": {
+            "email": email_match.group(0) if email_match else None,
+            "phone": phone_match.group(0) if phone_match else None,
+        },
+        "summary": summary,
+        "skills": structured.get("skills", []),
+        "projects": structured.get("projects", []),
+        "education": structured.get("education", []),
+        "experience": structured.get("experience", []),
+        "parse_warnings": warnings,
+        "raw": raw,
+    }

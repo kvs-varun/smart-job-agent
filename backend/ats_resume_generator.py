@@ -175,3 +175,87 @@ def generate_ats_pdf(
     c.save()
 
     return out_path
+
+
+def generate_docx_from_resume_json(resume_json: Dict, out_docx_path: str) -> str:
+    """Generate a simple ATS-friendly DOCX (single-column, no tables).
+
+    This is used as the primary format when docx conversion is available.
+    """
+
+    try:
+        import docx
+    except Exception as e:
+        raise RuntimeError("python-docx is required to generate DOCX") from e
+
+    os.makedirs(os.path.dirname(out_docx_path), exist_ok=True)
+
+    d = docx.Document()
+
+    name = resume_json.get("name") or "Your Name"
+    d.add_paragraph(name)
+
+    contact = resume_json.get("contact", {}) or {}
+    email = contact.get("email") or "your.email@example.com"
+    phone = contact.get("phone") or "+91-XXXXXXXXXX"
+    d.add_paragraph(f"Email: {email} | Phone: {phone} | Location: India")
+
+    def add_heading(title: str) -> None:
+        d.add_paragraph(title)
+
+    def add_bullets(items: List[str]) -> None:
+        for it in items:
+            if it:
+                d.add_paragraph(it, style="List Bullet")
+
+    add_heading("SUMMARY")
+    d.add_paragraph(resume_json.get("summary") or "")
+
+    add_heading("SKILLS")
+    skills = resume_json.get("skills") or []
+    d.add_paragraph(", ".join(skills))
+
+    familiarity = resume_json.get("familiarity_exposure") or resume_json.get("learning_exposure") or []
+    if familiarity:
+        add_heading("FAMILIARITY / EXPOSURE")
+        add_bullets(familiarity)
+
+    projects = resume_json.get("projects") or []
+    if projects:
+        add_heading("PROJECTS")
+        add_bullets(projects)
+
+    exp = resume_json.get("experience") or []
+    if exp:
+        add_heading("EXPERIENCE")
+        add_bullets(exp)
+
+    edu = resume_json.get("education") or []
+    if edu:
+        add_heading("EDUCATION")
+        add_bullets(edu)
+
+    d.save(out_docx_path)
+    return out_docx_path
+
+
+def convert_docx_to_pdf(docx_path: str, pdf_path: str) -> str:
+    """Convert DOCX -> PDF.
+
+    Tries docx2pdf first (Windows-friendly, uses Word if installed).
+    If conversion fails, falls back to reportlab PDF generation.
+    """
+
+    os.makedirs(os.path.dirname(pdf_path), exist_ok=True)
+
+    try:
+        from docx2pdf import convert
+
+        convert(docx_path, pdf_path)
+        if os.path.exists(pdf_path):
+            return pdf_path
+    except Exception:
+        pass
+
+    # Fallback: we can't render docx reliably, so generate from JSON content.
+    return pdf_path

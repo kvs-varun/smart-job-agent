@@ -1,0 +1,24 @@
+{
+  "version": "1.0",
+  "structure": {
+    "recommended_order_fresher": ["SUMMARY", "SKILLS", "PROJECTS", "EXPERIENCE", "EDUCATION"],
+    "one_page_rules": [
+      "Prioritize recent and relevant projects",
+      "Keep bullets concise (1-2 lines)",
+      "Remove unrelated technologies",
+      "Use consistent tense and action verbs"
+    ]
+  },
+  "bullet_style": {
+    "action_verbs": ["Built", "Developed", "Implemented", "Designed", "Integrated", "Optimized", "Created", "Automated", "Deployed", "Tested"],
+    "patterns": [
+      "<Verb> <what> using <tech> to <outcome>",
+      "<Verb> <feature> and integrated <api/tool>"
+    ]
+  },
+  "integrity_rules": [
+    "Do not add years of experience",
+    "Do not claim professional work for academic projects",
+    "Missing skills can only be marked as Exposure/Familiarity/Learning"
+  ]
+}

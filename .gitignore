@@ -56,6 +56,18 @@ web_modules/
 # Optional stylelint cache
 .stylelintcache
 
+# Ignore local history for Visual Studio Code
+.history/
+
+# Python
+__pycache__/
+*.pyc
+
+# Runtime artifacts
+backend/uploads/
+backend/generated/
+backend/static/generated/
+
 # Optional REPL history
 .node_repl_history
 

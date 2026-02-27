@@ -1,0 +1,25 @@
+{
+  "version": "1.0",
+  "role_tracks": {
+    "backend": {
+      "core_skills": ["python", "java", "sql", "rest api", "git", "oops"],
+      "projects_focus": ["api", "database", "authentication", "deployment"],
+      "fresher_signals": ["final year project", "internship", "api", "github"]
+    },
+    "frontend": {
+      "core_skills": ["javascript", "react", "html", "css", "git"],
+      "projects_focus": ["ui", "responsive", "api integration"],
+      "fresher_signals": ["portfolio", "deployed project", "github"]
+    },
+    "flutter": {
+      "core_skills": ["dart", "flutter", "api integration", "git"],
+      "projects_focus": ["mobile ui", "state management", "firebase"],
+      "fresher_signals": ["play store", "github", "internship"]
+    },
+    "data": {
+      "core_skills": ["python", "sql", "statistics"],
+      "projects_focus": ["dashboards", "analysis", "ml basics"],
+      "fresher_signals": ["kaggle", "portfolio", "projects"]
+    }
+  }
+}
