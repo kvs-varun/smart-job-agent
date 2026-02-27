@@ -178,7 +178,9 @@
         </div>
 
         <div class="actions">
+          <button id="previewTextBtn">Preview (parse + analyze)</button>
           <button id="generateBtn">Generate ATS PDF (from text)</button>
+          <button id="previewUploadBtn">Preview Upload (parse + analyze)</button>
           <button id="generateUploadBtn">Generate ATS PDF (from upload)</button>
           <span id="status" class="pill">Idle</span>
           <a id="downloadLink" class="link" href="#" style="display:none;">Download PDF</a>
@@ -188,6 +190,28 @@
           <pre id="output" aria-live="polite"></pre>
           <div class="footer">
             Note: Match percentage is based on a simple skill overlap list (you can extend the skill taxonomy safely).
+          </div>
+        </div>
+
+        <div class="result" style="margin-top: 18px;">
+          <div class="pill">Human-in-the-loop: review and edit before final PDF</div>
+          <div style="display:grid; gap: 10px;">
+            <div>
+              <label for="editSummary">Editable SUMMARY</label>
+              <textarea id="editSummary" placeholder="Preview resume first..."></textarea>
+            </div>
+            <div>
+              <label for="editSkills">Editable SKILLS (comma-separated)</label>
+              <textarea id="editSkills" placeholder="Preview resume first..." style="min-height: 90px;"></textarea>
+            </div>
+            <div>
+              <label for="editProjects">Editable PROJECT bullets (one per line)</label>
+              <textarea id="editProjects" placeholder="Preview resume first..." style="min-height: 160px;"></textarea>
+            </div>
+          </div>
+          <div class="actions">
+            <button id="finalizeBtn">Finalize PDF from Approved Resume</button>
+            <a id="finalDownloadLink" class="link" href="#" style="display:none;">Download Final PDF</a>
           </div>
         </div>
 
@@ -217,16 +241,181 @@
 
     <script>
       const generateBtn = document.getElementById('generateBtn');
+      const previewTextBtn = document.getElementById('previewTextBtn');
       const generateUploadBtn = document.getElementById('generateUploadBtn');
+      const previewUploadBtn = document.getElementById('previewUploadBtn');
       const statusEl = document.getElementById('status');
       const outputEl = document.getElementById('output');
       const downloadLink = document.getElementById('downloadLink');
       const outreachOutputEl = document.getElementById('outreachOutput');
       const coldEmailBtn = document.getElementById('coldEmailBtn');
+      const resumeFileEl = document.getElementById('resumeFile');
+
+      const editSummaryEl = document.getElementById('editSummary');
+      const editSkillsEl = document.getElementById('editSkills');
+      const editProjectsEl = document.getElementById('editProjects');
+      const finalizeBtn = document.getElementById('finalizeBtn');
+      const finalDownloadLink = document.getElementById('finalDownloadLink');
+
+      let lastJobAnalysis = null;
+      let approvedResumeJson = null;
 
       function setStatus(text) {
         statusEl.textContent = text;
       }
+
+      function setMutualExclusion() {
+        const resumeText = document.getElementById('resumeText').value;
+        const hasText = !!resumeText.trim();
+        const hasFile = !!(resumeFileEl.files && resumeFileEl.files[0]);
+
+        if (hasFile) {
+          document.getElementById('resumeText').disabled = true;
+        } else {
+          document.getElementById('resumeText').disabled = false;
+        }
+
+        if (hasText) {
+          resumeFileEl.disabled = true;
+        } else {
+          resumeFileEl.disabled = false;
+        }
+      }
+
+      document.getElementById('resumeText').addEventListener('input', setMutualExclusion);
+      resumeFileEl.addEventListener('change', setMutualExclusion);
+
+      function populateEditors(resumePreview) {
+        if (!resumePreview) return;
+
+        editSummaryEl.value = resumePreview.summary || '';
+        editSkillsEl.value = (resumePreview.skills || []).join(', ');
+        editProjectsEl.value = (resumePreview.projects || []).join('\n');
+
+        approvedResumeJson = {
+          name: resumePreview.name || null,
+          contact: resumePreview.contact || {},
+          summary: resumePreview.summary || '',
+          skills: resumePreview.skills || [],
+          projects: resumePreview.projects || [],
+          education: resumePreview.education || [],
+          experience: resumePreview.experience || [],
+          raw: ''
+        };
+      }
+
+      function readApprovedFromEditors() {
+        if (!approvedResumeJson) approvedResumeJson = {};
+        approvedResumeJson.summary = editSummaryEl.value || '';
+        approvedResumeJson.skills = (editSkillsEl.value || '')
+          .split(',')
+          .map(s => s.trim())
+          .filter(Boolean);
+        approvedResumeJson.projects = (editProjectsEl.value || '')
+          .split('\n')
+          .map(s => s.trim())
+          .filter(Boolean);
+        return approvedResumeJson;
+      }
+
+      async function previewFromText() {
+        const resumeText = document.getElementById('resumeText').value;
+        const jobDescription = document.getElementById('jobDescription').value;
+
+        if (!resumeText.trim()) {
+          outputEl.textContent = 'Error: resumeText is required for preview.';
+          return;
+        }
+
+        setStatus('Parsing...');
+        previewTextBtn.disabled = true;
+        try {
+          const res = await fetch('/agent/preview-resume-text', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ resumeText, jobDescription, role_preference: 'auto' })
+          });
+          const data = await res.json();
+          outputEl.textContent = JSON.stringify(data.analysis || data, null, 2);
+          lastJobAnalysis = (data.analysis && data.analysis.job_analysis) ? data.analysis.job_analysis : null;
+          populateEditors(data.resume_preview);
+          setStatus(res.ok ? 'Ready (preview)' : 'Error');
+        } catch (e) {
+          setStatus('Error');
+          outputEl.textContent = String(e);
+        } finally {
+          previewTextBtn.disabled = false;
+        }
+      }
+
+      async function previewFromUpload() {
+        const jobDescription = document.getElementById('jobDescription').value;
+        const resumeFile = resumeFileEl.files[0];
+
+        if (!resumeFile) {
+          outputEl.textContent = 'Error: resumeFile is required for preview.';
+          return;
+        }
+
+        setStatus('Parsing...');
+        previewUploadBtn.disabled = true;
+        try {
+          const form = new FormData();
+          form.append('resumeFile', resumeFile);
+          form.append('jobDescription', jobDescription);
+
+          const res = await fetch('/agent/preview-resume-upload', { method: 'POST', body: form });
+          const data = await res.json();
+          outputEl.textContent = JSON.stringify(data.analysis || data, null, 2);
+          lastJobAnalysis = (data.analysis && data.analysis.job_analysis) ? data.analysis.job_analysis : null;
+          populateEditors(data.resume_preview);
+          setStatus(res.ok ? 'Ready (preview)' : 'Error');
+        } catch (e) {
+          setStatus('Error');
+          outputEl.textContent = String(e);
+        } finally {
+          previewUploadBtn.disabled = false;
+        }
+      }
+
+      previewTextBtn.addEventListener('click', previewFromText);
+      previewUploadBtn.addEventListener('click', previewFromUpload);
+
+      finalizeBtn.addEventListener('click', async () => {
+        finalDownloadLink.style.display = 'none';
+        finalDownloadLink.href = '#';
+
+        if (!approvedResumeJson) {
+          outputEl.textContent = 'Error: Preview a resume first.';
+          return;
+        }
+
+        setStatus('Generating PDF...');
+        finalizeBtn.disabled = true;
+        try {
+          const approved = readApprovedFromEditors();
+          const res = await fetch('/agent/finalize-resume', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              approved_resume_json: approved,
+              job_analysis: lastJobAnalysis || {}
+            })
+          });
+          const data = await res.json();
+          outputEl.textContent = JSON.stringify(data, null, 2);
+          if (res.ok && data.download_url) {
+            finalDownloadLink.href = data.download_url;
+            finalDownloadLink.style.display = 'inline-block';
+          }
+          setStatus(res.ok ? 'Ready' : 'Error');
+        } catch (e) {
+          setStatus('Error');
+          outputEl.textContent = String(e);
+        } finally {
+          finalizeBtn.disabled = false;
+        }
+      });
 
       generateBtn.addEventListener('click', async () => {
         const resumeText = document.getElementById('resumeText').value;

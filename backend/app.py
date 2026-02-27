@@ -165,6 +165,84 @@ def preview_resume_upload():
     })
 
 
+@app.route("/agent/preview-resume-text", methods=["POST"])
+def preview_resume_text():
+    data = request.json
+    if not data:
+        return jsonify({"error": "No JSON received"}), 400
+
+    resume = data.get("resumeText")
+    job = data.get("jobDescription", "")
+    role_pref = data.get("role_preference", "auto")
+    if not resume:
+        return jsonify({"error": "resumeText is required"}), 400
+
+    resume_json = parse_resume_text_to_json(resume)
+    report = process_resume_from_text(resume_text=resume, job_text=job, role_preference=role_pref)
+    return jsonify({
+        "message": "Preview parsed",
+        "resume_preview": {
+            "name": resume_json.get("name"),
+            "contact": resume_json.get("contact"),
+            "summary": resume_json.get("summary"),
+            "skills": resume_json.get("skills"),
+            "projects": resume_json.get("projects"),
+            "education": resume_json.get("education"),
+            "experience": resume_json.get("experience"),
+            "parse_warnings": resume_json.get("parse_warnings", []),
+        },
+        "analysis": report.get("analysis"),
+    })
+
+
+@app.route("/agent/finalize-resume", methods=["POST"])
+def finalize_resume():
+    """Finalize PDF only from user-approved resume_json.
+
+    This endpoint does not perform additional rewriting. It only:
+    - runs quality gate on the provided JSON
+    - generates the PDF
+    """
+
+    data = request.json
+    if not data:
+        return jsonify({"error": "No JSON received"}), 400
+
+    approved = data.get("approved_resume_json")
+    if not approved or not isinstance(approved, dict):
+        return jsonify({"error": "approved_resume_json (object) is required"}), 400
+
+    # Reuse pipeline generator for PDF path rules.
+    try:
+        from .ats_resume_generator import generate_ats_pdf
+        from .ats_simulator import check_resume_quality
+    except ImportError:
+        from ats_resume_generator import generate_ats_pdf
+        from ats_simulator import check_resume_quality
+
+    job_analysis = data.get("job_analysis", {}) or {}
+
+    gate = check_resume_quality(approved, job_analysis)
+    if not gate.get("passed"):
+        return jsonify({"error": "quality_gate_failed", "quality_gate": gate}), 400
+
+    output_dir = os.path.join(os.path.dirname(__file__), "static", "generated")
+    pdf_path = generate_ats_pdf(
+        approved,
+        output_dir=output_dir,
+        filename_prefix="ats_resume_final",
+        candidate_name=approved.get("name"),
+    )
+    download_url = f"/static/generated/{os.path.basename(pdf_path)}"
+
+    return jsonify({
+        "message": "Final PDF generated",
+        "download_url": download_url,
+        "pdf_path": pdf_path,
+        "quality_gate": gate,
+    })
+
+
 @app.route("/agent/generate-resume-upload", methods=["POST"])
 def generate_resume_upload():
     # multipart/form-data: resumeFile + jobDescription
