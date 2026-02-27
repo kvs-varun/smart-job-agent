@@ -108,8 +108,9 @@ def generate_resume():
 
 @app.route("/agent/download/<path:filename>", methods=["GET"])
 def download_resume(filename: str):
-    # Security: only serve files from the known generated directory.
-    output_dir = os.path.join(os.path.dirname(__file__), "generated")
+    # Security: only serve files from known generated directories.
+    static_generated_dir = os.path.join(os.path.dirname(__file__), "static", "generated")
+    legacy_generated_dir = os.path.join(os.path.dirname(__file__), "generated")
     try:
         track_event(
             db_path=os.path.join(os.path.dirname(__file__), "data", "events.json"),
@@ -118,7 +119,20 @@ def download_resume(filename: str):
         )
     except Exception:
         pass
-    return send_from_directory(output_dir, filename, as_attachment=True)
+
+    # Prefer new location.
+    if os.path.exists(os.path.join(static_generated_dir, filename)):
+        return send_from_directory(static_generated_dir, filename, as_attachment=True)
+
+    # Backward-compatible fallback.
+    return send_from_directory(legacy_generated_dir, filename, as_attachment=True)
+
+
+@app.route("/static-generated/<path:filename>", methods=["GET"])
+def download_static_generated(filename: str):
+    # Attachment helper (some browsers open PDFs inline under /static).
+    static_generated_dir = os.path.join(os.path.dirname(__file__), "static", "generated")
+    return send_from_directory(static_generated_dir, filename, as_attachment=True)
 
 
 @app.route("/agent/preview-resume-upload", methods=["POST"])
