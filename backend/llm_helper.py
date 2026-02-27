@@ -19,7 +19,7 @@ def call_llm(system: str, user: str, temperature: float = 0.2, max_tokens: int =
     - Keep prompts in code (auditable)
     """
 
-    api_key = os.getenv("SMART_JOB_AGENT_LLM_API_KEY")
+    api_key = os.getenv("LLM_API_KEY") or os.getenv("SMART_JOB_AGENT_LLM_API_KEY")
     if not api_key:
         return {"ok": False, "text": None, "reason": "no_api_key"}
 
