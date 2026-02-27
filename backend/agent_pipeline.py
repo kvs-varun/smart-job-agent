@@ -8,6 +8,7 @@ try:
     from .job_matcher import analyze_job, compute_scores
     from .resume_tailor import tailor_resume
     from .ats_resume_generator import generate_ats_pdf
+    from .cold_email_agent import generate_outreach
 except ImportError:
     from knowledge_base import KnowledgeBase
     from resume_parser import parse_resume_text_to_json
@@ -15,6 +16,7 @@ except ImportError:
     from job_matcher import analyze_job, compute_scores
     from resume_tailor import tailor_resume
     from ats_resume_generator import generate_ats_pdf
+    from cold_email_agent import generate_outreach
 
 
 def _get_kb() -> KnowledgeBase:
@@ -55,6 +57,15 @@ def process_resume_from_text(resume_text: str, job_text: str, role_preference: s
 
     download_url = f"/static/generated/{os.path.basename(pdf_path)}"
 
+    outreach = generate_outreach(
+        resume_json=tailored_resume_json,
+        job_analysis={**job_analysis, **scores},
+        company_name="{{company}}",
+        role_title="{{role}}",
+        your_name=tailored_resume_json.get("name") or "{{your_name}}",
+        recruiter_name="{{recruiter_name}}",
+    )
+
     return {
         "analysis": {
             "role_key": role_key,
@@ -65,6 +76,7 @@ def process_resume_from_text(resume_text: str, job_text: str, role_preference: s
         },
         "tailored_resume_json": tailored_resume_json,
         "change_log": change_log,
+        "outreach": outreach,
         "download_url": download_url,
         "pdf_path": pdf_path,
     }
