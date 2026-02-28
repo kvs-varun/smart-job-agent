@@ -41,16 +41,28 @@ def check_resume_quality(resume_json: Dict, job_analysis: Dict) -> Dict:
     if len(projects) > 5:
         suggestions.append("Consider limiting projects to 2–4 most relevant for one-page clarity.")
 
-    # Keyword coverage (skills only)
+    # Keyword coverage (skills + familiarity/exposure)
     resume_skills = [s.lower() for s in (resume_json.get("skills") or [])]
+    exposure_blob = _normalize(" ".join(resume_json.get("familiarity_exposure") or []))
     job_skills_l = [s.lower() for s in job_skills]
 
-    matched = sorted(list(set(resume_skills) & set(job_skills_l)))
+    matched_set = set(resume_skills)
+    for js in job_skills_l:
+        if js and js in exposure_blob:
+            matched_set.add(js)
+
+    matched = sorted(list(matched_set & set(job_skills_l)))
     coverage = int((len(matched) / len(job_skills_l)) * 100) if job_skills_l else 0
 
     if priority_skills:
         pr = [p.lower() for p in priority_skills]
-        missing_pr = [p for p in pr if p not in resume_skills]
+        missing_pr = []
+        for p in pr:
+            if p in resume_skills:
+                continue
+            if p and p in exposure_blob:
+                continue
+            missing_pr.append(p)
         if missing_pr:
             issues.append("Missing priority skills from SKILLS: " + ", ".join(missing_pr[:5]))
             suggestions.append("If you genuinely know these, add them under Skills or Familiarity/Exposure.")

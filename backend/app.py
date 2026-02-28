@@ -193,6 +193,7 @@ def preview_resume_text():
             "projects": resume_json.get("projects"),
             "education": resume_json.get("education"),
             "experience": resume_json.get("experience"),
+            "familiarity_exposure": resume_json.get("familiarity_exposure"),
             "parse_warnings": resume_json.get("parse_warnings", []),
         },
         "analysis": report.get("analysis"),
