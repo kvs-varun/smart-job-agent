@@ -216,40 +216,54 @@
 
       <div class="panel">
         <div class="steps" aria-label="Progress">
-          <div id="step1" class="step active">Step 1: Provide Resume + JD</div>
-          <div id="step2" class="step">Step 2: Preview & Review</div>
+          <div id="step1" class="step active">Step 1: Upload Resume & Job Description</div>
+          <div id="step2" class="step">Step 2: Preview & Match Analysis</div>
           <div id="step3" class="step">Step 3: Edit & Approve</div>
-          <div id="step4" class="step">Step 4: Finalize PDF</div>
+          <div id="step4" class="step">Step 4: Download & Apply</div>
         </div>
 
-        <div class="grid">
-          <div>
-            <label for="resumeText">Resume text</label>
-            <textarea id="resumeText" placeholder="Paste your resume text here..."></textarea>
+        <div id="errorBox" class="card" style="display:none; margin-top: 12px;">
+          <div class="small">We couldn’t continue</div>
+          <div id="errorText" style="white-space:pre-wrap; font-size: 13px;"></div>
+        </div>
+
+        <div id="helperBox" class="card" style="margin-top: 12px;">
+          <div class="small">What to do next</div>
+          <div id="helperText" style="white-space:pre-wrap; font-size: 13px;"></div>
+        </div>
+
+        <div id="step1View" class="result" style="margin-top: 12px;">
+          <div class="card">
+            <div class="small">Resume input (choose one)</div>
+            <div class="actions" style="margin-top: 10px;">
+              <button id="useTextBtn" class="ghost">Paste resume text</button>
+              <button id="useUploadBtn" class="ghost">Upload resume file</button>
+            </div>
+            <div id="resumeTextWrap" style="margin-top: 10px;">
+              <label for="resumeText">Resume text</label>
+              <textarea id="resumeText" placeholder="Paste your resume here (name, education, projects, skills)."></textarea>
+              <div class="small">Tip: Include 2–3 projects and a clean Skills section.</div>
+            </div>
+            <div id="resumeUploadWrap" style="margin-top: 10px; display:none;">
+              <label for="resumeFile">Upload resume file (PDF / DOCX)</label>
+              <input id="resumeFile" type="file" accept=".pdf,.docx" />
+              <div class="small">We only extract text and generate an ATS-safe one-page PDF.</div>
+            </div>
           </div>
-          <div>
+
+          <div class="card">
             <label for="jobDescription">Job description</label>
-            <textarea id="jobDescription" placeholder="Paste the job description here..."></textarea>
+            <textarea id="jobDescription" placeholder="Paste the job description (skills + responsibilities)."></textarea>
+            <div class="small">This is required for matching and ATS alignment.</div>
+          </div>
+
+          <div class="actions">
+            <button id="checkMatchBtn">Check Job Match</button>
+            <span id="status" class="pill"></span>
           </div>
         </div>
 
-        <div class="actions" style="margin-top: 10px;">
-          <div style="flex: 1; min-width: 260px;">
-            <label for="resumeFile">Or upload resume file (PDF / DOCX)</label>
-            <input id="resumeFile" type="file" accept=".pdf,.docx" />
-          </div>
-        </div>
-
-        <div class="actions">
-          <button id="previewTextBtn">Preview (parse + analyze)</button>
-          <button id="generateBtn" style="display:none;">Generate ATS PDF (from text)</button>
-          <button id="previewUploadBtn">Preview Upload (parse + analyze)</button>
-          <button id="generateUploadBtn" style="display:none;">Generate ATS PDF (from upload)</button>
-          <span id="status" class="pill">Idle</span>
-          <a id="downloadLink" class="link" href="#" style="display:none;">Download PDF</a>
-        </div>
-
-        <div class="result">
+        <div id="step2View" class="result" style="margin-top: 12px; display:none;">
           <div class="row">
             <div class="card">
               <div class="small">Match %</div>
@@ -259,117 +273,129 @@
             <div class="card">
               <div class="small">ATS alignment score</div>
               <div id="atsScore" class="metric">--</div>
-              <div class="small">Format + section completeness + keywords</div>
+              <div class="small">Sections + keywords + readability</div>
             </div>
           </div>
 
-          <div class="row">
-            <div class="card">
-              <div class="small">Matched skills</div>
+          <div class="card" style="margin-top: 10px;">
+            <div class="small">Details</div>
+            <details open style="margin-top: 8px;">
+              <summary class="small">Matched skills</summary>
               <ul id="matchedSkills" class="list"></ul>
               <div class="toolbar">
                 <button id="copyMatchedBtn" class="ghost">Copy</button>
               </div>
-            </div>
-            <div class="card">
-              <div class="small">Missing skills (Exposure only)</div>
+            </details>
+            <details style="margin-top: 10px;">
+              <summary class="small">Missing skills (Exposure only)</summary>
+              <div class="small">We never add these as real skills unless you genuinely have them.</div>
               <ul id="missingSkills" class="list"></ul>
               <div class="toolbar">
                 <button id="copyMissingBtn" class="ghost">Copy</button>
               </div>
-            </div>
-          </div>
-
-          <div class="card">
-            <div class="small">Quality gate</div>
-            <div class="toolbar">
-              <span id="gateStatus" class="pill">--</span>
-              <span class="small" id="gateMeta"></span>
-              <button id="copySuggestionsBtn" class="ghost">Copy suggestions</button>
-            </div>
-            <ul id="gateSuggestions" class="list"></ul>
-          </div>
-
-          <div class="card" id="errorBox" style="display:none;">
-            <div class="small">Error</div>
-            <div id="errorText" style="white-space:pre-wrap; font-size: 13px;"></div>
-          </div>
-          <div class="footer">
-            Note: Match percentage is based on a simple skill overlap list (you can extend the skill taxonomy safely).
-          </div>
-        </div>
-
-        <div class="result" style="margin-top: 18px;">
-          <div class="pill">Human-in-the-loop: review and edit before final PDF</div>
-          <div style="display:grid; gap: 10px;">
-            <div>
-              <label for="editSummary">Editable SUMMARY</label>
-              <textarea id="editSummary" placeholder="Preview resume first..."></textarea>
-            </div>
-            <div>
-              <label for="editSkills">Editable SKILLS (comma-separated)</label>
-              <textarea id="editSkills" placeholder="Preview resume first..." style="min-height: 90px;"></textarea>
-            </div>
-            <div>
-              <label for="editProjects">Editable PROJECT bullets (one per line)</label>
-              <textarea id="editProjects" placeholder="Preview resume first..." style="min-height: 160px;"></textarea>
-            </div>
-          </div>
-          <div class="actions">
-            <button id="finalizeBtn">Finalize PDF from Approved Resume</button>
-            <a id="finalDownloadLink" class="link" href="#" style="display:none;">Download Final PDF</a>
-          </div>
-        </div>
-
-        <div class="result" style="margin-top: 18px;">
-          <div class="pill">Outreach (copy/paste)</div>
-          <div style="display:flex; gap: 12px; flex-wrap: wrap; align-items: flex-end;">
-            <div style="min-width: 240px; flex: 1;">
-              <label for="companyName">Company name</label>
-              <input id="companyName" type="text" style="width:100%; padding:10px; border-radius:12px; border:1px solid var(--border); background: rgba(0,0,0,0.2); color: var(--text);" placeholder="e.g., TCS / Infosys / Startup name" />
-            </div>
-            <div style="min-width: 240px; flex: 1;">
-              <label for="roleTitle">Role title</label>
-              <input id="roleTitle" type="text" style="width:100%; padding:10px; border-radius:12px; border:1px solid var(--border); background: rgba(0,0,0,0.2); color: var(--text);" placeholder="e.g., Software Engineer / Associate Engineer" />
-            </div>
-            <div style="min-width: 240px; flex: 1;">
-              <label for="candidateName">Your name</label>
-              <input id="candidateName" type="text" style="width:100%; padding:10px; border-radius:12px; border:1px solid var(--border); background: rgba(0,0,0,0.2); color: var(--text);" placeholder="e.g., Rahul Sharma" />
-            </div>
-            <div style="min-width: 240px; flex: 1;">
-              <label for="recruiterEmail">Recruiter email (optional)</label>
-              <input id="recruiterEmail" type="email" style="width:100%; padding:10px; border-radius:12px; border:1px solid var(--border); background: rgba(0,0,0,0.2); color: var(--text);" placeholder="e.g., recruiter@company.com" />
-            </div>
+            </details>
+            <details style="margin-top: 10px;">
+              <summary class="small">Quality gate suggestions</summary>
+              <ul id="gateSuggestions" class="list"></ul>
+              <div class="toolbar">
+                <span id="gateStatus" class="pill">--</span>
+                <span class="small" id="gateMeta"></span>
+                <button id="copySuggestionsBtn" class="ghost">Copy</button>
+              </div>
+            </details>
           </div>
 
           <div class="actions">
-            <button id="coldEmailBtn">Generate Outreach</button>
-            <button id="copyEmailBtn" class="ghost">Copy email</button>
-            <button id="copyLinkedinBtn" class="ghost">Copy LinkedIn</button>
-            <a id="mailtoLink" class="link" href="#" style="display:none;">Open in Email</a>
-            <a id="gmailLink" class="link" href="#" style="display:none;" target="_blank" rel="noopener">Open in Gmail</a>
+            <button id="goToEditBtn">Edit & Approve Resume</button>
+          </div>
+        </div>
+
+        <div id="step3View" class="result" style="margin-top: 12px; display:none;">
+          <div class="card">
+            <div class="pill">Ethics: We never add fake experience. Missing skills are exposure only.</div>
+            <div style="display:grid; gap: 10px; margin-top: 10px;">
+              <div>
+                <label for="editSummary">Summary</label>
+                <textarea id="editSummary" placeholder="Write a 2–3 line fresher summary." style="min-height: 110px;"></textarea>
+              </div>
+              <div>
+                <label for="editSkills">Skills (comma-separated)</label>
+                <textarea id="editSkills" placeholder="Example: Python, Flask, SQL" style="min-height: 90px;"></textarea>
+              </div>
+              <div>
+                <label for="editProjects">Projects (one bullet per line)</label>
+                <textarea id="editProjects" placeholder="Example: Built a Flask API..." style="min-height: 170px;"></textarea>
+              </div>
+              <div>
+                <label for="editExposure">Familiarity / Exposure (optional, one per line)</label>
+                <textarea id="editExposure" placeholder="Example: Familiarity/Exposure: Docker — learning via course" style="min-height: 110px;"></textarea>
+                <div class="small">Use this for missing JD skills only if you genuinely studied them.</div>
+              </div>
+            </div>
+          </div>
+          <div class="actions">
+            <button id="finalizeBtn">Finalize ATS Resume</button>
+          </div>
+        </div>
+
+        <div id="step4View" class="result" style="margin-top: 12px; display:none;">
+          <div class="card">
+            <div class="small">Your ATS-friendly PDF is ready</div>
+            <div class="actions" style="margin-top: 10px;">
+              <a id="finalDownloadLink" class="link" href="#" style="display:none;">Download PDF</a>
+              <span id="finalStatus" class="pill"></span>
+            </div>
           </div>
 
-          <div class="card">
-            <div class="small">Email (≤150 words)</div>
-            <textarea id="emailBody" style="min-height: 140px;" placeholder="Generate outreach after preview..."></textarea>
-          </div>
+          <div class="card" style="margin-top: 10px;">
+            <details>
+              <summary class="small">Outreach (optional)</summary>
+              <div style="display:flex; gap: 12px; flex-wrap: wrap; align-items: flex-end; margin-top: 10px;">
+                <div style="min-width: 240px; flex: 1;">
+                  <label for="companyName">Company name</label>
+                  <input id="companyName" type="text" style="width:100%; padding:10px; border-radius:12px; border:1px solid var(--border); background: rgba(0,0,0,0.2); color: var(--text);" placeholder="e.g., TCS / Infosys / Startup name" />
+                </div>
+                <div style="min-width: 240px; flex: 1;">
+                  <label for="roleTitle">Role title</label>
+                  <input id="roleTitle" type="text" style="width:100%; padding:10px; border-radius:12px; border:1px solid var(--border); background: rgba(0,0,0,0.2); color: var(--text);" placeholder="e.g., Backend Engineer (Fresher)" />
+                </div>
+                <div style="min-width: 240px; flex: 1;">
+                  <label for="candidateName">Your name</label>
+                  <input id="candidateName" type="text" style="width:100%; padding:10px; border-radius:12px; border:1px solid var(--border); background: rgba(0,0,0,0.2); color: var(--text);" placeholder="e.g., Rahul Sharma" />
+                </div>
+                <div style="min-width: 240px; flex: 1;">
+                  <label for="recruiterEmail">Recruiter email (optional)</label>
+                  <input id="recruiterEmail" type="email" style="width:100%; padding:10px; border-radius:12px; border:1px solid var(--border); background: rgba(0,0,0,0.2); color: var(--text);" placeholder="e.g., recruiter@company.com" />
+                </div>
+              </div>
 
-          <div class="card">
-            <div class="small">LinkedIn message (≤300 chars)</div>
-            <textarea id="linkedinMsg" style="min-height: 90px;" placeholder="Generate outreach after preview..."></textarea>
+              <div class="actions" style="margin-top: 10px;">
+                <button id="coldEmailBtn">Generate cold email</button>
+                <button id="copyEmailBtn" class="ghost">Copy email</button>
+                <button id="copyLinkedinBtn" class="ghost">Copy LinkedIn</button>
+                <a id="mailtoLink" class="link" href="#" style="display:none;">Open in Email</a>
+                <a id="gmailLink" class="link" href="#" style="display:none;" target="_blank" rel="noopener">Open in Gmail</a>
+              </div>
+
+              <div class="card" style="margin-top: 10px;">
+                <div class="small">Email (≤150 words)</div>
+                <textarea id="emailBody" style="min-height: 140px;" placeholder="Click “Generate cold email”."></textarea>
+              </div>
+
+              <div class="card" style="margin-top: 10px;">
+                <div class="small">LinkedIn message (≤300 chars)</div>
+                <textarea id="linkedinMsg" style="min-height: 90px;" placeholder="Click “Generate cold email”."></textarea>
+              </div>
+            </details>
           </div>
         </div>
       </div>
     </div>
 
     <script>
-      const generateBtn = document.getElementById('generateBtn');
-      const previewTextBtn = document.getElementById('previewTextBtn');
-      const generateUploadBtn = document.getElementById('generateUploadBtn');
-      const previewUploadBtn = document.getElementById('previewUploadBtn');
       const statusEl = document.getElementById('status');
-      const downloadLink = document.getElementById('downloadLink');
+      const helperTextEl = document.getElementById('helperText');
+      const helperBoxEl = document.getElementById('helperBox');
       const coldEmailBtn = document.getElementById('coldEmailBtn');
       const copyEmailBtn = document.getElementById('copyEmailBtn');
       const copyLinkedinBtn = document.getElementById('copyLinkedinBtn');
@@ -401,11 +427,37 @@
       const editSummaryEl = document.getElementById('editSummary');
       const editSkillsEl = document.getElementById('editSkills');
       const editProjectsEl = document.getElementById('editProjects');
+      const editExposureEl = document.getElementById('editExposure');
       const finalizeBtn = document.getElementById('finalizeBtn');
       const finalDownloadLink = document.getElementById('finalDownloadLink');
+      const finalStatusEl = document.getElementById('finalStatus');
 
-      let lastJobAnalysis = null;
-      let approvedResumeJson = null;
+      const step1View = document.getElementById('step1View');
+      const step2View = document.getElementById('step2View');
+      const step3View = document.getElementById('step3View');
+      const step4View = document.getElementById('step4View');
+
+      const resumeTextWrap = document.getElementById('resumeTextWrap');
+      const resumeUploadWrap = document.getElementById('resumeUploadWrap');
+
+      const useTextBtn = document.getElementById('useTextBtn');
+      const useUploadBtn = document.getElementById('useUploadBtn');
+      const checkMatchBtn = document.getElementById('checkMatchBtn');
+      const goToEditBtn = document.getElementById('goToEditBtn');
+
+      const appState = {
+        step: 1,
+        resumeSource: 'text',
+        previewReady: false,
+        approved: false,
+        pdfReady: false,
+        busy: false,
+        error: null,
+        analysis: null,
+        jobAnalysis: null,
+        resumePreview: null,
+        downloadUrl: null,
+      };
 
       function setStep(n) {
         const steps = [step1El, step2El, step3El, step4El];
@@ -416,44 +468,99 @@
       }
 
       function setStatus(text) {
-        statusEl.textContent = text;
+        statusEl.textContent = text || '';
+        statusEl.style.display = text ? 'inline-block' : 'none';
       }
 
-      function setPrereqState(previewReady) {
-        finalizeBtn.disabled = !previewReady;
-        coldEmailBtn.disabled = !previewReady;
-        copyEmailBtn.disabled = !previewReady;
-        copyLinkedinBtn.disabled = !previewReady;
-        copyMatchedBtn.disabled = !previewReady;
-        copyMissingBtn.disabled = !previewReady;
-        copySuggestionsBtn.disabled = !previewReady;
+      function showError(msg) {
+        appState.error = msg || 'Something went wrong.';
+        errorTextEl.textContent = appState.error;
+        errorBoxEl.style.display = 'block';
       }
 
-      // Initial state
-      setStep(1);
-      clearPanels();
-      setPrereqState(false);
+      function clearError() {
+        appState.error = null;
+        errorTextEl.textContent = '';
+        errorBoxEl.style.display = 'none';
+      }
 
-      function setMutualExclusion() {
-        const resumeText = document.getElementById('resumeText').value;
-        const hasText = !!resumeText.trim();
-        const hasFile = !!(resumeFileEl.files && resumeFileEl.files[0]);
+      function clearAnalysisPanels() {
+        matchPctEl.textContent = '--';
+        atsScoreEl.textContent = '--';
+        matchedSkillsEl.innerHTML = '';
+        missingSkillsEl.innerHTML = '';
+        gateStatusEl.textContent = '--';
+        gateMetaEl.textContent = '';
+        gateSuggestionsEl.innerHTML = '';
+      }
 
-        if (hasFile) {
-          document.getElementById('resumeText').disabled = true;
-        } else {
-          document.getElementById('resumeText').disabled = false;
-        }
-
-        if (hasText) {
-          resumeFileEl.disabled = true;
-        } else {
-          resumeFileEl.disabled = false;
+      function copyText(text) {
+        try {
+          navigator.clipboard.writeText(text || '');
+        } catch (e) {
+          // no-op
         }
       }
 
-      document.getElementById('resumeText').addEventListener('input', setMutualExclusion);
-      resumeFileEl.addEventListener('change', setMutualExclusion);
+      function render() {
+        setStep(appState.step);
+
+        step1View.style.display = appState.step === 1 ? 'grid' : 'none';
+        step2View.style.display = appState.step === 2 ? 'grid' : 'none';
+        step3View.style.display = appState.step === 3 ? 'grid' : 'none';
+        step4View.style.display = appState.step === 4 ? 'grid' : 'none';
+
+        resumeTextWrap.style.display = appState.resumeSource === 'text' ? 'block' : 'none';
+        resumeUploadWrap.style.display = appState.resumeSource === 'upload' ? 'block' : 'none';
+
+        const resumeText = document.getElementById('resumeText');
+        resumeText.disabled = appState.resumeSource !== 'text' || appState.busy;
+        resumeFileEl.disabled = appState.resumeSource !== 'upload' || appState.busy;
+
+        useTextBtn.disabled = appState.busy;
+        useUploadBtn.disabled = appState.busy;
+
+        const jobDescription = document.getElementById('jobDescription');
+        jobDescription.disabled = appState.busy;
+
+        const hasJD = !!jobDescription.value.trim();
+        const hasResumeText = !!resumeText.value.trim();
+        const hasResumeFile = !!(resumeFileEl.files && resumeFileEl.files[0]);
+        const resumeReady = appState.resumeSource === 'text' ? hasResumeText : hasResumeFile;
+
+        checkMatchBtn.disabled = appState.busy || !hasJD || !resumeReady;
+        goToEditBtn.disabled = appState.busy || !appState.previewReady;
+        finalizeBtn.disabled = appState.busy || !appState.previewReady;
+
+        coldEmailBtn.disabled = appState.busy || !appState.pdfReady;
+        copyEmailBtn.disabled = appState.busy || !appState.pdfReady;
+        copyLinkedinBtn.disabled = appState.busy || !appState.pdfReady;
+        copyMatchedBtn.disabled = appState.busy || !appState.previewReady;
+        copyMissingBtn.disabled = appState.busy || !appState.previewReady;
+        copySuggestionsBtn.disabled = appState.busy || !appState.previewReady;
+
+        if (appState.step === 1) {
+          helperTextEl.textContent =
+            'Step 1: Add your resume (paste text OR upload a file) and paste the job description.\n\nThen click “Check Job Match”.';
+        } else if (appState.step === 2) {
+          helperTextEl.textContent =
+            'Step 2: Review your match results. Missing skills are “Exposure only”.\n\nClick “Edit & Approve Resume” to continue.';
+        } else if (appState.step === 3) {
+          helperTextEl.textContent =
+            'Step 3: Make final edits. Do not add fake experience.\n\nClick “Finalize ATS Resume” to generate your one-page PDF.';
+        } else if (appState.step === 4) {
+          helperTextEl.textContent =
+            'Step 4: Download your PDF. Then optionally generate a ready-to-send cold email.';
+        }
+
+        helperBoxEl.style.display = 'block';
+
+        finalDownloadLink.style.display = appState.downloadUrl ? 'inline-block' : 'none';
+        finalDownloadLink.href = appState.downloadUrl || '#';
+
+        finalStatusEl.textContent = appState.pdfReady ? 'PDF ready' : (appState.busy ? 'Working…' : '');
+        finalStatusEl.style.display = (appState.step === 4 && (appState.pdfReady || appState.busy)) ? 'inline-block' : 'none';
+      }
 
       function populateEditors(resumePreview) {
         if (!resumePreview) return;
@@ -461,131 +568,151 @@
         editSummaryEl.value = resumePreview.summary || '';
         editSkillsEl.value = (resumePreview.skills || []).join(', ');
         editProjectsEl.value = (resumePreview.projects || []).join('\n');
+        editExposureEl.value = (resumePreview.familiarity_exposure || []).join('\n');
 
-        approvedResumeJson = {
-          name: resumePreview.name || null,
-          contact: resumePreview.contact || {},
-          summary: resumePreview.summary || '',
-          skills: resumePreview.skills || [],
-          projects: resumePreview.projects || [],
-          education: resumePreview.education || [],
-          experience: resumePreview.experience || [],
-          raw: ''
-        };
+        appState.resumePreview = resumePreview;
       }
 
       function readApprovedFromEditors() {
-        if (!approvedResumeJson) approvedResumeJson = {};
-        approvedResumeJson.summary = editSummaryEl.value || '';
-        approvedResumeJson.skills = (editSkillsEl.value || '')
-          .split(',')
-          .map(s => s.trim())
-          .filter(Boolean);
-        approvedResumeJson.projects = (editProjectsEl.value || '')
-          .split('\n')
-          .map(s => s.trim())
-          .filter(Boolean);
-        return approvedResumeJson;
+        const base = appState.resumePreview || {};
+        const approved = {
+          name: base.name || null,
+          contact: base.contact || {},
+          summary: editSummaryEl.value || '',
+          skills: (editSkillsEl.value || '')
+            .split(',')
+            .map(s => s.trim())
+            .filter(Boolean),
+          projects: (editProjectsEl.value || '')
+            .split('\n')
+            .map(s => s.trim())
+            .filter(Boolean),
+          education: base.education || [],
+          experience: base.experience || [],
+          familiarity_exposure: (editExposureEl.value || '')
+            .split('\n')
+            .map(s => s.trim())
+            .filter(Boolean)
+        };
+        return approved;
       }
 
-      async function previewFromText() {
-        const resumeText = document.getElementById('resumeText').value;
-        const jobDescription = document.getElementById('jobDescription').value;
+      function renderAnalysis(analysis) {
+        clearAnalysisPanels();
+        const scores = (analysis && analysis.scores) ? analysis.scores : {};
+        const gate = (analysis && analysis.quality_gate) ? analysis.quality_gate : {};
+        matchPctEl.textContent = (scores.match_percentage !== undefined && scores.match_percentage !== null) ? `${scores.match_percentage}%` : '--';
+        atsScoreEl.textContent = (scores.ats_alignment_score !== undefined && scores.ats_alignment_score !== null) ? String(scores.ats_alignment_score) : '--';
 
-        if (!resumeText.trim()) {
-          showError('Error: resumeText is required for preview.');
-          return;
-        }
+        const matched = scores.matched_skills || [];
+        const missing = scores.missing_skills || [];
 
-        clearPanels();
-        setPrereqState(false);
-        setStep(2);
-        setStatus('Step 2: Parsing & analyzing...');
-        previewTextBtn.disabled = true;
-        finalizeBtn.disabled = true;
-        try {
-          const res = await fetch('/agent/preview-resume-text', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ resumeText, jobDescription, role_preference: 'auto' })
-          });
-          const data = await res.json();
-          if (!res.ok) {
-            showError(data.error ? JSON.stringify(data, null, 2) : 'Preview failed');
-            setStatus('Error');
-            return;
-          }
+        matchedSkillsEl.innerHTML = matched.length ? matched.map(s => `<li>${escapeHtml(String(s))}</li>`).join('') : '<li class="small">No matched skills detected yet.</li>';
+        missingSkillsEl.innerHTML = missing.length ? missing.map(s => `<li>${escapeHtml(String(s))}</li>`).join('') : '<li class="small">No missing skills detected.</li>';
 
-          lastJobAnalysis = (data.analysis && data.analysis.job_analysis) ? data.analysis.job_analysis : null;
-          populateEditors(data.resume_preview);
-          renderAnalysis(data.analysis);
-          setPrereqState(true);
-          setStep(3);
-          setStatus('Step 3: Review & edit, then approve');
-        } catch (e) {
-          setStatus('Error');
-          showError(String(e));
-        } finally {
-          previewTextBtn.disabled = false;
-        }
+        gateStatusEl.textContent = gate.passed ? 'Gate: PASS' : 'Gate: NEEDS FIX';
+        gateMetaEl.textContent = (gate.ats_gate_score !== undefined) ? `Gate score: ${gate.ats_gate_score} | Coverage: ${gate.keyword_coverage}%` : '';
+        const sugg = gate.suggestions || [];
+        gateSuggestionsEl.innerHTML = sugg.length ? sugg.map(s => `<li>${escapeHtml(String(s))}</li>`).join('') : '<li class="small">No suggestions.</li>';
       }
 
-      async function previewFromUpload() {
-        const jobDescription = document.getElementById('jobDescription').value;
-        const resumeFile = resumeFileEl.files[0];
-
-        if (!resumeFile) {
-          showError('Error: resumeFile is required for preview.');
-          return;
-        }
-
-        clearPanels();
-        setStep(2);
-        setStatus('Step 2: Parsing & analyzing...');
-        previewUploadBtn.disabled = true;
-        finalizeBtn.disabled = true;
-        try {
-          const form = new FormData();
-          form.append('resumeFile', resumeFile);
-          form.append('jobDescription', jobDescription);
-
-          const res = await fetch('/agent/preview-resume-upload', { method: 'POST', body: form });
-          const data = await res.json();
-          if (!res.ok) {
-            showError(data.error ? JSON.stringify(data, null, 2) : 'Preview failed');
-            setStatus('Error');
-            return;
-          }
-
-          lastJobAnalysis = (data.analysis && data.analysis.job_analysis) ? data.analysis.job_analysis : null;
-          populateEditors(data.resume_preview);
-          renderAnalysis(data.analysis);
-          setPrereqState(true);
-          setStep(3);
-          setStatus('Step 3: Review & edit, then approve');
-        } catch (e) {
-          setStatus('Error');
-          showError(String(e));
-        } finally {
-          previewUploadBtn.disabled = false;
-        }
+      function escapeHtml(str) {
+        return str
+          .replaceAll('&', '&amp;')
+          .replaceAll('<', '&lt;')
+          .replaceAll('>', '&gt;')
+          .replaceAll('"', '&quot;')
+          .replaceAll("'", '&#039;');
       }
 
-      previewTextBtn.addEventListener('click', previewFromText);
-      previewUploadBtn.addEventListener('click', previewFromUpload);
-
-      finalizeBtn.addEventListener('click', async () => {
+      async function checkJobMatch() {
+        clearError();
+        clearAnalysisPanels();
+        appState.previewReady = false;
+        appState.approved = false;
+        appState.pdfReady = false;
+        appState.downloadUrl = null;
         finalDownloadLink.style.display = 'none';
         finalDownloadLink.href = '#';
 
-        if (!approvedResumeJson) {
-          showError('Error: Preview a resume first.');
+        const resumeText = document.getElementById('resumeText').value;
+        const jobDescription = document.getElementById('jobDescription').value;
+        const resumeFile = resumeFileEl.files && resumeFileEl.files[0];
+
+        if (!jobDescription.trim()) {
+          showError('Please paste the job description to continue.');
+          render();
+          return;
+        }
+        if (appState.resumeSource === 'text' && !resumeText.trim()) {
+          showError('Please paste your resume text (or switch to upload).');
+          render();
+          return;
+        }
+        if (appState.resumeSource === 'upload' && !resumeFile) {
+          showError('Please upload your resume file (PDF/DOCX).');
+          render();
           return;
         }
 
-        setStep(4);
-        setStatus('Step 4: Validating & generating PDF...');
-        finalizeBtn.disabled = true;
+        appState.step = 1;
+        appState.busy = true;
+        setStatus('Checking match…');
+        render();
+
+        try {
+          let res;
+          if (appState.resumeSource === 'text') {
+            res = await fetch('/agent/preview-resume-text', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ resumeText, jobDescription, role_preference: 'auto' })
+            });
+          } else {
+            const form = new FormData();
+            form.append('resumeFile', resumeFile);
+            form.append('jobDescription', jobDescription);
+            res = await fetch('/agent/preview-resume-upload', { method: 'POST', body: form });
+          }
+
+          const data = await res.json();
+          if (!res.ok) {
+            showError(data && data.error ? JSON.stringify(data, null, 2) : 'Preview failed.');
+            return;
+          }
+
+          appState.analysis = data.analysis || null;
+          appState.jobAnalysis = (data.analysis && data.analysis.job_analysis) ? data.analysis.job_analysis : null;
+          populateEditors(data.resume_preview);
+          renderAnalysis(appState.analysis);
+          appState.previewReady = true;
+          appState.step = 2;
+          setStatus('Match ready');
+        } catch (e) {
+          showError(String(e));
+        } finally {
+          appState.busy = false;
+          setStatus('');
+          render();
+        }
+      }
+
+      async function finalizePdf() {
+        clearError();
+        if (!appState.previewReady || !appState.resumePreview) {
+          showError('Please complete Step 2 (Check Job Match) first.');
+          render();
+          return;
+        }
+
+        appState.busy = true;
+        appState.approved = true;
+        appState.pdfReady = false;
+        appState.downloadUrl = null;
+        appState.step = 3;
+        setStatus('Generating PDF…');
+        render();
+
         try {
           const approved = readApprovedFromEditors();
           const res = await fetch('/agent/finalize-resume', {
@@ -593,28 +720,34 @@
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               approved_resume_json: approved,
-              job_analysis: lastJobAnalysis || {}
+              job_analysis: appState.jobAnalysis || {}
             })
           });
           const data = await res.json();
           if (!res.ok) {
-            showError(data.error ? JSON.stringify(data, null, 2) : 'Finalize failed');
-            setStatus('Error');
-            setStep(3);
+            showError(data && data.error ? JSON.stringify(data, null, 2) : 'Finalize failed.');
+            appState.step = 3;
             return;
           }
-          if (res.ok && data.download_url) {
-            finalDownloadLink.href = data.download_url;
-            finalDownloadLink.style.display = 'inline-block';
+          if (!data.download_url) {
+            showError('Finalize succeeded but no download_url was returned.');
+            appState.step = 3;
+            return;
           }
-          setStatus('Ready');
+
+          appState.downloadUrl = data.download_url;
+          appState.pdfReady = true;
+          appState.step = 4;
+          setStatus('');
         } catch (e) {
-          setStatus('Error');
           showError(String(e));
+          appState.step = 3;
         } finally {
-          finalizeBtn.disabled = false;
+          appState.busy = false;
+          setStatus('');
+          render();
         }
-      });
+      }
 
       copySuggestionsBtn.addEventListener('click', () => {
         const items = Array.from(gateSuggestionsEl.querySelectorAll('li')).map(li => li.textContent);
@@ -638,8 +771,9 @@
         mailtoLinkEl.href = '#';
         gmailLinkEl.href = '#';
 
-        if (!approvedResumeJson) {
-          showError('Error: Preview a resume first (Step 2).');
+        clearError();
+        if (!appState.pdfReady) {
+          showError('Please generate your PDF first (Step 4) before outreach.');
           return;
         }
 
@@ -648,7 +782,7 @@
           return;
         }
 
-        setStatus('Generating outreach...');
+        setStatus('Generating outreach…');
         coldEmailBtn.disabled = true;
 
         try {
@@ -665,6 +799,11 @@
           });
 
           const data = await res.json();
+          if (!res.ok) {
+            showError(data && data.error ? JSON.stringify(data, null, 2) : 'Outreach failed.');
+            setStatus('');
+            return;
+          }
           const out = data.outreach || {};
           emailBodyEl.value = out.cold_email || '';
           linkedinMsgEl.value = out.linkedin_message || '';
@@ -676,14 +815,65 @@
             gmailLinkEl.href = data.gmail_url;
             gmailLinkEl.style.display = 'inline-block';
           }
-          setStatus(res.ok ? 'Done' : 'Error');
+          setStatus('');
         } catch (e) {
-          setStatus('Error');
           showError(String(e));
+          setStatus('');
         } finally {
           coldEmailBtn.disabled = false;
         }
       });
+
+      useTextBtn.addEventListener('click', () => {
+        clearError();
+        appState.resumeSource = 'text';
+        render();
+      });
+
+      useUploadBtn.addEventListener('click', () => {
+        clearError();
+        appState.resumeSource = 'upload';
+        render();
+      });
+
+      checkMatchBtn.addEventListener('click', checkJobMatch);
+
+      goToEditBtn.addEventListener('click', () => {
+        clearError();
+        if (!appState.previewReady) {
+          showError('Please complete Step 2 first.');
+          render();
+          return;
+        }
+        appState.step = 3;
+        render();
+      });
+
+      finalizeBtn.addEventListener('click', finalizePdf);
+
+      copySuggestionsBtn.addEventListener('click', () => {
+        const items = Array.from(gateSuggestionsEl.querySelectorAll('li')).map(li => li.textContent);
+        copyText(items.join('\n'));
+      });
+
+      copyEmailBtn.addEventListener('click', () => copyText(emailBodyEl.value || ''));
+      copyLinkedinBtn.addEventListener('click', () => copyText(linkedinMsgEl.value || ''));
+
+      copyMatchedBtn.addEventListener('click', () => {
+        const items = Array.from(matchedSkillsEl.querySelectorAll('li')).map(li => li.textContent);
+        copyText(items.join('\n'));
+      });
+
+      copyMissingBtn.addEventListener('click', () => {
+        const items = Array.from(missingSkillsEl.querySelectorAll('li')).map(li => li.textContent);
+        copyText(items.join('\n'));
+      });
+
+      // Initial render
+      clearError();
+      clearAnalysisPanels();
+      setStatus('');
+      render();
     </script>
   </body>
 </html>
