@@ -1,157 +1,151 @@
-# smart-job-agent
-AI-powered agent to analyze resumes against job descriptions and suggest improvements
+# Smart Job Agent (Phase-2 Hard-Ship)
 
-## What this project does
+Knowledge-augmented, human-in-the-loop **ATS Resume + Outreach assistant** for the **Indian IT fresher market**.
 
-`smart-job-agent` is a **personal-use** AI-assisted backend that helps an Indian IT fresher:
+This is built for:
 
-- **Analyze** a job description against a resume
-- **Identify** matched and missing skills + a match percentage
-- **Tailor** the resume content ethically (no fake claims)
-- **Generate** a one-page, ATS-friendly **PDF resume** (single-column, no tables/images)
+- **Final-year engineering students**
+- **Recent CS graduates**
+- **Bootcamp/self-taught candidates**
 
-This project is designed to be **portfolio-worthy** and **interview-explainable**: it uses simple, modular, rule-based logic (no hype, no illegal automation).
+Output:
 
-## Safety, ethics, and feasibility
+- A **one-page, ATS-friendly PDF** resume (selectable text, no columns/tables/images)
+- A constrained, recruiter-friendly **cold email** (≤150 words)
+- A constrained **LinkedIn message** (≤300 characters)
 
-- **No credential harvesting**
-- **No CAPTCHA bypass**
-- **No mass auto-apply**
-- **No promises of “100% ATS pass”**
+## Ethics & Safety (non-negotiable)
 
-The tailoring is intentionally conservative:
+- Do **not** fabricate experience, dates, companies, or metrics.
+- Missing skills must appear only as **Familiarity/Exposure** with honest wording.
+- No scraping job sites, no CAPTCHA bypass, no credential harvesting.
 
-- Missing skills are only included as **“Learning exposure / currently upskilling”**
-- The system avoids skill inflation and encourages honest representation
+**Disclaimer:** This tool helps with formatting and ethical tailoring. It does **not** guarantee interviews or job offers.
 
-## Backend architecture (Flask + modular Python)
+## Product Flow (4 steps)
 
-The backend lives in `backend/`.
+1. **Upload Resume**
+   - Upload PDF/DOCX **or** paste resume text (mutually exclusive enforced)
+   - Paste job description (required)
+2. **Check Job Match (Preview)**
+   - Parse resume → analyze job match → ATS simulator
+   - Show match %, ATS alignment, matched/missing skills, quality gate
+   - **No PDF generated yet**
+3. **Fix & Approve (Human-in-the-loop)**
+   - Edit summary, skills, project bullets
+   - Add missing skills only as **Familiarity/Exposure**
+4. **Download & Apply (Finalize)**
+   - Quality gate re-check
+   - Generate one-page PDF to `backend/static/generated/`
+   - Download button becomes available
 
-- `backend/app.py`
-  - Flask app
-  - Existing endpoint: `POST /agent/observe`
-  - New endpoint: `POST /agent/generate-resume`
+## Architecture (high level)
 
-- `backend/agent_reasoner.py`
-  - `extract_skills(text)`
-  - `analyze_match(resume_text, job_text)`
-  - `generate_resume_actions(analysis_result)`
-
-- `backend/resume_parser.py`
-  - `parse_resume_text(resume_text)`
-  - Converts raw resume text to structured JSON with sections:
-    - `summary`, `skills`, `projects`, `education`, `experience`
-
-- `backend/resume_tailor.py`
-  - `tailor_resume(structured_resume, analysis_result)`
-  - Reorders skills to highlight matched ones
-  - Adds missing skills only as “learning exposure”
-
-- `backend/ats_resume_generator.py`
-  - `generate_ats_pdf(tailored_resume, output_dir, ...)`
-  - Produces ATS-friendly PDF via `reportlab`
-  - Single-column, no images, no tables
-
-- `backend/agent_controller.py`
-  - `run_agent_pipeline(resume_text, job_description, output_dir)`
-  - Orchestrates parsing -> analysis -> tailoring -> PDF generation
-
-## API
-
-### 1) Analyze only
-
-`POST /agent/observe`
-
-Request JSON:
-
-```json
-{
-  "resumeText": "...",
-  "jobDescription": "..."
-}
+```
+Browser UI (templates/index.html)
+  |  Step 1-4 UX + edits + copy buttons
+  v
+Flask API (backend/app.py)
+  |  preview endpoints (no PDF)
+  |  finalize endpoint (PDF from approved JSON only)
+  |  outreach endpoint (mailto + Gmail link)
+  v
+Agent Pipeline (backend/agent_pipeline.py)
+  | parse -> KB role inference -> job match -> ATS simulator -> safe corrections
+  v
+PDF Generator (backend/ats_resume_generator.py)
+  | reportlab deterministic PDF
+  v
+Static downloads (backend/static/generated/*.pdf)
 ```
 
-Response JSON (example shape):
+## Key Endpoints
 
-```json
-{
-  "message": "Agent analysis complete",
-  "analysis": {
-    "matched_skills": [],
-    "missing_skills": [],
-    "match_percentage": 0
-  },
-  "recommended_actions": []
-}
-```
+- **Preview from pasted text**
+  - `POST /agent/preview-resume-text`
+  - body: `{ "resumeText": "...", "jobDescription": "...", "role_preference": "auto" }`
 
-### 2) Generate tailored ATS PDF
+- **Preview from upload**
+  - `POST /agent/preview-resume-upload` (multipart)
+  - fields: `resumeFile`, `jobDescription`
 
-`POST /agent/generate-resume`
+- **Finalize PDF from user-approved JSON (no rewriting)**
+  - `POST /agent/finalize-resume`
+  - body: `{ "approved_resume_json": {...}, "job_analysis": {...} }`
+  - returns: `{ download_url, pdf_path, quality_gate }`
 
-Request JSON:
+- **Generate outreach**
+  - `POST /agent/generate-cold-email`
+  - body: `{ jobDescription, companyName, roleTitle, candidateName, recruiterEmail? }`
+  - returns: `{ outreach, mailto, gmail_url }`
 
-```json
-{
-  "resumeText": "...",
-  "jobDescription": "..."
-}
-```
+- **Analytics (token-protected)**
+  - `GET /analytics/summary`
+  - header: `X-Analytics-Token: $SMART_JOB_AGENT_ANALYTICS_TOKEN`
 
-Response JSON:
+## Environment Variables
 
-```json
-{
-  "message": "ATS resume generated",
-  "match_percentage": 65,
-  "missing_skills": ["docker"],
-  "recommended_actions": ["..."],
-  "pdf_path": "D:/smart-job-agent/backend/generated/ats_resume_candidate_20260226_123000.pdf"
-}
-```
+- `SMART_JOB_AGENT_ANALYTICS_TOKEN` (optional)
+  - Enables auth for `/analytics/summary`
+- `LLM_API_KEY` (optional)
+  - LLM is optional; the system works without it.
+- `DOCX2PDF_AVAILABLE=true` (optional / future)
 
-## Setup (Windows)
+## Run Locally (Windows)
 
-1) Create a virtual environment
-
-```bash
+```powershell
 python -m venv .venv
-.venv\\Scripts\\activate
+.venv\Scripts\Activate.ps1
+python -m pip install -r requirements.txt
+python backend\app.py
 ```
 
-2) Install dependencies
+Open:
 
-```bash
-pip install -r requirements.txt
+- `http://127.0.0.1:5000/`
+
+## Verification
+
+### Automated acceptance (server must be running)
+
+```powershell
+python scripts\verify_acceptance.py
 ```
 
-3) Run the backend
+This checks:
 
-```bash
-python backend/app.py
+- preview returns analysis
+- finalize returns `download_url`
+- download returns a real PDF (`%PDF`)
+- outreach returns `mailto` and `gmail_url`
+
+### Tests
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\run_tests.ps1
 ```
 
-### Common PowerShell mistakes (quick fixes)
+## Analytics Events
 
-- If you typed `install flask reportlab`, use `pip install ...` instead.
-- If your terminal is already inside `backend/`, run:
+Recorded locally to: `backend/data/events.json`
 
-```bash
-python app.py
-```
+- `generate_attempt`
+- `preview_success` (if added)
+- `user_edit_accepted`
+- `final_pdf_generated`
+- `outreach_generated`
+- `pdf_download`
 
-The server runs on `http://127.0.0.1:5000`.
+## Monetization hook (stub)
 
-## How it helps in the Indian fresher market
+`backend/billing_stub.py` provides placeholder endpoints:
 
-- Emphasizes **projects**, **internships**, and **skill keywords** commonly screened on Naukri/LinkedIn-style ATS
-- Keeps formatting ATS-friendly for PDF parsing
-- Encourages targeted upskilling (missing skills list) without claiming experience
+- `GET /billing/plans`
+- `POST /billing/checkout`
 
-## How to explain in interviews
+Integrate Stripe/Razorpay later; do not store card data.
 
-- **Problem**: Freshers struggle to map JD keywords to their actual project experience.
-- **Approach**: A pipeline that parses resume text into sections, compares skill overlap, and generates an ATS-friendly PDF.
-- **Key design choice**: Tailoring is **ethical** and **auditable** (simple rules, explicit “learning exposure”).
-- **Tradeoffs**: Rule-based parsing is transparent but not perfect; can be improved with better section detection and a broader skill taxonomy.
+## Legal
+
+- `docs/terms.md`
+- `docs/privacy.md`
