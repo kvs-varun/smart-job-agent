@@ -1,0 +1,106 @@
+:root {
+  /* Primary */
+  --color-primary: #0f172a;
+  --color-primary-light: #1e293b;
+  --color-primary-mid: #334155;
+
+  /* Accent */
+  --color-accent: #6366f1;
+  --color-accent-hover: #4f46e5;
+  --color-accent-glow: rgba(99, 102, 241, 0.25);
+
+  /* Secondary */
+  --color-teal: #14b8a6;
+  --color-amber: #f59e0b;
+  --color-red: #ef4444;
+  --color-green: #10b981;
+
+  /* Text */
+  --color-text-primary: #f8fafc;
+  --color-text-secondary: #94a3b8;
+  --color-text-accent: #a5b4fc;
+
+  /* Resume preview */
+  --color-resume-bg: #ffffff;
+  --color-resume-text: #111827;
+
+  /* Surfaces */
+  --radius: 14px;
+  --border: rgba(148, 163, 184, 0.18);
+  --shadow: 0 20px 60px rgba(2, 6, 23, 0.55);
+
+  /* Fonts (wired in layout.tsx) */
+  --font-heading: var(--font-plus-jakarta), var(--font-inter), ui-sans-serif, system-ui;
+  --font-body: var(--font-inter), ui-sans-serif, system-ui;
+  --font-mono: var(--font-geist-mono), ui-monospace, SFMono-Regular;
+}
+
+html,
+body {
+  max-width: 100vw;
+  overflow-x: hidden;
+}
+
+body {
+  color: var(--color-text-primary);
+  background: radial-gradient(1200px 800px at 20% 0%, rgba(99, 102, 241, 0.22), transparent),
+    radial-gradient(900px 600px at 80% 0%, rgba(20, 184, 166, 0.18), transparent),
+    var(--color-primary);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  box-sizing: border-box;
+  padding: 0;
+  margin: 0;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button,
+input,
+textarea {
+  font-family: inherit;
+}
+
+:focus-visible {
+  outline: 3px solid rgba(99, 102, 241, 0.55);
+  outline-offset: 2px;
+}
+
+.container {
+  width: 100%;
+  max-width: 1160px;
+  margin: 0 auto;
+  padding: 20px 18px;
+}
+
+.card {
+  background: rgba(30, 41, 59, 0.65);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: 0 0 0 rgba(0, 0, 0, 0);
+  backdrop-filter: blur(12px);
+}
+
+.muted {
+  color: var(--color-text-secondary);
+}
+
+.h1 {
+  font-family: var(--font-heading);
+  font-weight: 800;
+  letter-spacing: -0.04em;
+}
+
+.gradientText {
+  background: linear-gradient(90deg, var(--color-accent), var(--color-teal));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
