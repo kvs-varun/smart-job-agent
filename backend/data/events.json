@@ -1,0 +1,282 @@
+[
+  {
+    "id": "evt_20260227_121608_646049",
+    "type": "user_edit_accepted",
+    "timestamp_utc": "2026-02-27T12:16:08.646062Z",
+    "payload": {
+      "has_job_analysis": true
+    }
+  },
+  {
+    "id": "evt_20260227_122041_471173",
+    "type": "user_edit_accepted",
+    "timestamp_utc": "2026-02-27T12:20:41.471187Z",
+    "payload": {
+      "has_job_analysis": true
+    }
+  },
+  {
+    "id": "evt_20260228_073333_262801",
+    "type": "user_edit_accepted",
+    "timestamp_utc": "2026-02-28T07:33:33.262817Z",
+    "payload": {
+      "has_job_analysis": true
+    }
+  },
+  {
+    "id": "evt_20260228_073404_899698",
+    "type": "user_edit_accepted",
+    "timestamp_utc": "2026-02-28T07:34:04.899716Z",
+    "payload": {
+      "has_job_analysis": true
+    }
+  },
+  {
+    "id": "evt_20260228_073422_811174",
+    "type": "user_edit_accepted",
+    "timestamp_utc": "2026-02-28T07:34:22.811189Z",
+    "payload": {
+      "has_job_analysis": true
+    }
+  },
+  {
+    "id": "evt_20260228_073502_032756",
+    "type": "user_edit_accepted",
+    "timestamp_utc": "2026-02-28T07:35:02.032780Z",
+    "payload": {
+      "has_job_analysis": true
+    }
+  },
+  {
+    "id": "evt_20260228_073517_288655",
+    "type": "user_edit_accepted",
+    "timestamp_utc": "2026-02-28T07:35:17.288686Z",
+    "payload": {
+      "has_job_analysis": true
+    }
+  },
+  {
+    "id": "evt_20260228_073517_291042",
+    "type": "final_pdf_generated",
+    "timestamp_utc": "2026-02-28T07:35:17.291052Z",
+    "payload": {
+      "filename": "ats_resume_final_Rahul_Sharma_20260228_073517.pdf"
+    }
+  },
+  {
+    "id": "evt_20260228_073517_393781",
+    "type": "outreach_generated",
+    "timestamp_utc": "2026-02-28T07:35:17.393810Z",
+    "payload": {
+      "company": "Acme",
+      "role": "Backend Engineer (Fresher)"
+    }
+  },
+  {
+    "id": "evt_20260228_075327_378270",
+    "type": "user_edit_accepted",
+    "timestamp_utc": "2026-02-28T07:53:27.378288Z",
+    "payload": {
+      "has_job_analysis": true
+    }
+  },
+  {
+    "id": "evt_20260228_075327_380587",
+    "type": "final_pdf_generated",
+    "timestamp_utc": "2026-02-28T07:53:27.380601Z",
+    "payload": {
+      "filename": "ats_resume_final_Rahul_Sharma_20260228_075327.pdf"
+    }
+  },
+  {
+    "id": "evt_20260228_075327_418808",
+    "type": "outreach_generated",
+    "timestamp_utc": "2026-02-28T07:53:27.418825Z",
+    "payload": {
+      "company": "Acme",
+      "role": "Backend Engineer (Fresher)"
+    }
+  },
+  {
+    "id": "evt_20260228_075338_324381",
+    "type": "user_edit_accepted",
+    "timestamp_utc": "2026-02-28T07:53:38.324397Z",
+    "payload": {
+      "has_job_analysis": true
+    }
+  },
+  {
+    "id": "evt_20260314_050953_449634",
+    "type": "user_edit_accepted",
+    "timestamp_utc": "2026-03-14T05:09:53.449648Z",
+    "payload": {
+      "has_job_analysis": true
+    }
+  },
+  {
+    "id": "evt_20260314_050953_452633",
+    "type": "final_pdf_generated",
+    "timestamp_utc": "2026-03-14T05:09:53.452651Z",
+    "payload": {
+      "filename": "ats_resume_final_Rahul_Sharma_20260314_050953.pdf"
+    }
+  },
+  {
+    "id": "evt_20260314_050953_586073",
+    "type": "outreach_generated",
+    "timestamp_utc": "2026-03-14T05:09:53.586095Z",
+    "payload": {
+      "company": "Acme",
+      "role": "Backend Engineer (Fresher)"
+    }
+  },
+  {
+    "id": "evt_20260314_055316_883686",
+    "type": "user_edit_accepted",
+    "timestamp_utc": "2026-03-14T05:53:16.883709Z",
+    "payload": {
+      "has_job_analysis": true
+    }
+  },
+  {
+    "id": "evt_20260314_055316_893340",
+    "type": "final_pdf_generated",
+    "timestamp_utc": "2026-03-14T05:53:16.893351Z",
+    "payload": {
+      "filename": "ats_resume_final_Rahul_Sharma_20260314_055316.pdf"
+    }
+  },
+  {
+    "id": "evt_20260314_055316_954769",
+    "type": "outreach_generated",
+    "timestamp_utc": "2026-03-14T05:53:16.954796Z",
+    "payload": {
+      "company": "Acme",
+      "role": "Backend Engineer (Fresher)"
+    }
+  },
+  {
+    "id": "evt_20260316_064832_061472",
+    "type": "user_edit_accepted",
+    "timestamp_utc": "2026-03-16T06:48:32.061502Z",
+    "payload": {
+      "has_job_analysis": false
+    }
+  },
+  {
+    "id": "evt_20260316_071213_571692",
+    "type": "jd_match_semantic_attempt",
+    "timestamp_utc": "2026-03-16T07:12:13.571719Z",
+    "payload": {
+      "has_resume": true,
+      "has_jd": true
+    }
+  },
+  {
+    "id": "evt_20260316_071455_425210",
+    "type": "jd_match_semantic_attempt",
+    "timestamp_utc": "2026-03-16T07:14:55.425232Z",
+    "payload": {
+      "has_resume": true,
+      "has_jd": true
+    }
+  },
+  {
+    "id": "evt_20260316_071535_963749",
+    "type": "jd_match_semantic_attempt",
+    "timestamp_utc": "2026-03-16T07:15:35.963769Z",
+    "payload": {
+      "has_resume": true,
+      "has_jd": true
+    }
+  },
+  {
+    "id": "evt_20260316_071537_705170",
+    "type": "jd_match_semantic_attempt",
+    "timestamp_utc": "2026-03-16T07:15:37.705229Z",
+    "payload": {
+      "has_resume": true,
+      "has_jd": true
+    }
+  },
+  {
+    "id": "evt_20260316_071557_741054",
+    "type": "jd_match_semantic_attempt",
+    "timestamp_utc": "2026-03-16T07:15:57.741077Z",
+    "payload": {
+      "has_resume": true,
+      "has_jd": true
+    }
+  },
+  {
+    "id": "evt_20260316_071603_631142",
+    "type": "jd_match_semantic_attempt",
+    "timestamp_utc": "2026-03-16T07:16:03.631200Z",
+    "payload": {
+      "has_resume": true,
+      "has_jd": true
+    }
+  },
+  {
+    "id": "evt_20260316_071647_315408",
+    "type": "jd_match_semantic_attempt",
+    "timestamp_utc": "2026-03-16T07:16:47.315430Z",
+    "payload": {
+      "has_resume": true,
+      "has_jd": true
+    }
+  },
+  {
+    "id": "evt_20260316_071925_632119",
+    "type": "jd_match_semantic_attempt",
+    "timestamp_utc": "2026-03-16T07:19:25.632140Z",
+    "payload": {
+      "has_resume": true,
+      "has_jd": true
+    }
+  },
+  {
+    "id": "evt_20260316_071931_185532",
+    "type": "jd_match_semantic_attempt",
+    "timestamp_utc": "2026-03-16T07:19:31.185553Z",
+    "payload": {
+      "has_resume": true,
+      "has_jd": true
+    }
+  },
+  {
+    "id": "evt_20260316_071953_432079",
+    "type": "jd_match_semantic_attempt",
+    "timestamp_utc": "2026-03-16T07:19:53.432098Z",
+    "payload": {
+      "has_resume": true,
+      "has_jd": true
+    }
+  },
+  {
+    "id": "evt_20260316_074505_458415",
+    "type": "jd_match_semantic_attempt",
+    "timestamp_utc": "2026-03-16T07:45:05.458436Z",
+    "payload": {
+      "has_resume": true,
+      "has_jd": true
+    }
+  },
+  {
+    "id": "evt_20260317_090714_492761",
+    "type": "jd_match_semantic_attempt",
+    "timestamp_utc": "2026-03-17T09:07:14.492790Z",
+    "payload": {
+      "has_resume": true,
+      "has_jd": true
+    }
+  },
+  {
+    "id": "evt_20260317_091012_355865",
+    "type": "user_edit_accepted",
+    "timestamp_utc": "2026-03-17T09:10:12.355895Z",
+    "payload": {
+      "has_job_analysis": false
+    }
+  }
+]

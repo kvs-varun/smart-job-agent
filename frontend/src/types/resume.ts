@@ -1,29 +1,90 @@
-export type ResumeContact = {
-  email?: string | null;
-  phone?: string | null;
-  location?: string | null;
-  linkedinUrl?: string | null;
-  githubUrl?: string | null;
-  portfolioUrl?: string | null;
+export const makeId = () =>
+  typeof crypto !== "undefined" && "randomUUID" in crypto
+    ? crypto.randomUUID()
+    : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+
+export interface ContactInfo {
+  name: string;
+  jobTitle: string;
+  email: string;
+  phone: string;
+  location: string;
+  linkedin: string;
+  github: string;
+  portfolio: string;
+}
+
+export interface ExperienceEntry {
+  id: string;
+  title: string;
+  company: string;
+  startDate: string;
+  endDate: string;
+  current: boolean;
+  location: string;
+  description: string;
+}
+
+export interface EducationEntry {
+  id: string;
+  degree: string;
+  institution: string;
+  field: string;
+  startYear: string;
+  endYear: string;
+  grade: string;
+}
+
+export interface ProjectEntry {
+  id: string;
+  name: string;
+  description: string;
+  techStack: string[];
+  github: string;
+  demo: string;
+}
+
+export interface ResumeData {
+  contact: ContactInfo;
+  summary: string;
+  experience: ExperienceEntry[];
+  education: EducationEntry[];
+  skills: string[];
+  projects: ProjectEntry[];
+}
+
+export const EMPTY_CONTACT: ContactInfo = {
+  name: "",
+  jobTitle: "",
+  email: "",
+  phone: "",
+  location: "",
+  linkedin: "",
+  github: "",
+  portfolio: "",
 };
 
-export type ResumeData = {
-  name?: string | null;
-  title?: string | null;
-  contact?: ResumeContact;
-  summary: string;
-  skills: string[];
-  projects: string[];
-  education: string[];
-  experience: string[];
-  familiarity_exposure?: string[];
+export const EMPTY_RESUME: ResumeData = {
+  contact: { ...EMPTY_CONTACT },
+  summary: "",
+  experience: [],
+  education: [],
+  skills: [],
+  projects: [],
 };
 
 export type PreviewResponse = {
   message: string;
   resume_preview: {
     name?: string | null;
-    contact?: ResumeContact;
+    contact?: {
+      email?: string | null;
+      phone?: string | null;
+      location?: string | null;
+      linkedinUrl?: string | null;
+      githubUrl?: string | null;
+      portfolioUrl?: string | null;
+    };
     summary?: string;
     skills?: string[];
     projects?: string[];

@@ -1,7 +1,7 @@
 import type { ResumeData } from "@/types/resume";
 
 export function ResumePreview({ data }: { data: ResumeData }) {
-  const name = data.name || "Your Name";
+  const name = data.contact?.name || "Your Name";
   const summary = data.summary || "";
 
   return (
@@ -18,7 +18,7 @@ export function ResumePreview({ data }: { data: ResumeData }) {
     >
       <div style={{ fontSize: 22, fontWeight: 800, marginBottom: 6 }}>{name}</div>
       <div style={{ fontSize: 11, marginBottom: 12, opacity: 0.8 }}>
-        Email: {data.contact?.email || "your.email@example.com"} | Phone: {data.contact?.phone || "+91-XXXXXXXXXX"} | Location: India
+        Email: {data.contact?.email || "your.email@example.com"} | Phone: {data.contact?.phone || "+91-XXXXXXXXXX"} | Location: {data.contact?.location || "India"}
       </div>
 
       <Section title="SUMMARY">
@@ -29,21 +29,11 @@ export function ResumePreview({ data }: { data: ResumeData }) {
         <div style={{ fontSize: 12, lineHeight: 1.45 }}>{(data.skills || []).join(", ")}</div>
       </Section>
 
-      {data.familiarity_exposure && data.familiarity_exposure.length > 0 ? (
-        <Section title="FAMILIARITY / EXPOSURE">
-          <ul style={{ margin: 0, paddingLeft: 16, fontSize: 12, lineHeight: 1.45 }}>
-            {data.familiarity_exposure.map((x, idx) => (
-              <li key={idx}>{x}</li>
-            ))}
-          </ul>
-        </Section>
-      ) : null}
-
       {data.projects && data.projects.length > 0 ? (
         <Section title="PROJECTS">
           <ul style={{ margin: 0, paddingLeft: 16, fontSize: 12, lineHeight: 1.45 }}>
-            {data.projects.map((x, idx) => (
-              <li key={idx}>{x}</li>
+            {data.projects.map((x) => (
+              <li key={x.id}>{x.name}</li>
             ))}
           </ul>
         </Section>
@@ -52,8 +42,18 @@ export function ResumePreview({ data }: { data: ResumeData }) {
       {data.education && data.education.length > 0 ? (
         <Section title="EDUCATION">
           <ul style={{ margin: 0, paddingLeft: 16, fontSize: 12, lineHeight: 1.45 }}>
-            {data.education.map((x, idx) => (
-              <li key={idx}>{x}</li>
+            {data.education.map((x) => (
+              <li key={x.id}>{[x.degree, x.institution].filter(Boolean).join(" — ")}</li>
+            ))}
+          </ul>
+        </Section>
+      ) : null}
+
+      {data.experience && data.experience.length > 0 ? (
+        <Section title="EXPERIENCE">
+          <ul style={{ margin: 0, paddingLeft: 16, fontSize: 12, lineHeight: 1.45 }}>
+            {data.experience.map((x) => (
+              <li key={x.id}>{[x.title, x.company].filter(Boolean).join(" — ")}</li>
             ))}
           </ul>
         </Section>

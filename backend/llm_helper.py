@@ -1,6 +1,13 @@
 import os
 from typing import Dict, Optional
 
+try:
+    from dotenv import load_dotenv
+
+    load_dotenv()
+except Exception:
+    pass
+
 
 def call_llm(system: str, user: str, temperature: float = 0.2, max_tokens: int = 800) -> Dict:
     """LLM wrapper (disabled by default).
