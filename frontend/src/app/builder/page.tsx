@@ -4,6 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
 import {
+  Award,
   Brain,
   Briefcase,
   Check,
@@ -24,6 +25,7 @@ import {
   Plus,
   Sparkles,
   Trash2,
+  Trophy,
   User,
   X,
   Zap,
@@ -33,11 +35,12 @@ import { toast } from "sonner";
 import { ATSMinimal } from "@/components/templates/ATSMinimal";
 import { ATSScoreCard } from "@/components/ats/ATSScoreCard";
 import { ResumeImporter } from "@/components/importer/ResumeImporter";
-import type { EducationEntry, ExperienceEntry, ProjectEntry, ResumeData } from "@/types/resume";
+import type { AchievementEntry, CertificationEntry, EducationEntry, ExperienceEntry, ProjectEntry, ResumeData } from "@/types/resume";
 import { useResumeStore } from "@/store/resumeStore";
 import { Button } from "@/components/ui/Button";
 import { cn } from "@/lib/utils";
 import * as flaskApi from "@/lib/flaskApi";
+import * as agentApi from "@/lib/agentApi";
 
 export default function BuilderPage() {
   return <BuilderInner />;
@@ -81,6 +84,10 @@ function validateStep(step: number, resume: ResumeData): { ok: boolean; message:
     if (resume.skills.length < 5) return { ok: false, message: "Add at least 5 skills." };
     return { ok: true, message: "" };
   }
+  if (step === 6) {
+    // Certifications & Awards step is optional — always valid
+    return { ok: true, message: "" };
+  }
   if (step === 5) {
     if (resume.projects.length === 0) return { ok: false, message: "Add at least 1 project." };
     const bad = resume.projects.some((p) => !p.name.trim());
@@ -109,21 +116,51 @@ function BuilderInner() {
   const addProject = useResumeStore((s) => s.addProject);
   const updateProject = useResumeStore((s) => s.updateProject);
   const removeProject = useResumeStore((s) => s.removeProject);
+  const addCertification = useResumeStore((s) => s.addCertification);
+  const updateCertification = useResumeStore((s) => s.updateCertification);
+  const removeCertification = useResumeStore((s) => s.removeCertification);
+  const addAchievement = useResumeStore((s) => s.addAchievement);
+  const updateAchievement = useResumeStore((s) => s.updateAchievement);
+  const removeAchievement = useResumeStore((s) => s.removeAchievement);
   const importResumeData = useResumeStore((s) => s.importResumeData);
+  const resetResume = useResumeStore((s) => s.resetResume);
 
   const [mobileView, setMobileView] = React.useState<"edit" | "preview">("edit");
   const [importOpen, setImportOpen] = React.useState(false);
   const [isExportingPdf, setIsExportingPdf] = React.useState(false);
+  const [selectedTemplate, setSelectedTemplate] = React.useState<"ats_pro" | "jakes" | "harvard">("ats_pro");
+  const [templatePickerOpen, setTemplatePickerOpen] = React.useState(false);
+
+  const TEMPLATE_OPTIONS: Array<{ id: "ats_pro" | "jakes" | "harvard"; label: string; tagline: string; best: string }> = [
+    { id: "ats_pro",  label: "ATS Pro Minimalist", tagline: "Startups · Greenhouse · Modern Tech", best: "Startups / product companies" },
+    { id: "jakes",   label: "Jake's Resume",       tagline: "FAANG India · Tech-focused · Single column", best: "SWE / backend / data roles" },
+    { id: "harvard", label: "Harvard Chronological", tagline: "TCS · Infosys · PSU · Traditional HR", best: "IT services / campus placement" },
+  ];
 
   const handleExportPdf = React.useCallback(async () => {
     try {
       setIsExportingPdf(true);
-      const result = await flaskApi.finalizeResume({ approvedResumeJson: resumeData, jobAnalysis: null });
-
-      const downloadUrl = result.download_url;
+      // Try V2 API first (supports all 3 templates), fall back to V1 Flask
+      let downloadUrl: string | null = null;
+      try {
+        const v2Result = await agentApi.finalizeResumeV2({
+          resume_data: resumeData as unknown as Record<string, unknown>,
+          selected_template: selectedTemplate,
+        });
+        downloadUrl = v2Result.download_url;
+      } catch {
+        const v1Result = await flaskApi.finalizeResume({ approvedResumeJson: resumeData, jobAnalysis: null });
+        downloadUrl = v1Result.download_url ?? null;
+      }
       if (!downloadUrl) throw new Error("Missing download URL");
 
-      const pdfRes = await fetch(downloadUrl);
+      // Backend returns "/v2/agent/download/filename.pdf" — route through Next.js proxy
+      // so the browser doesn't try to fetch from port 3000 (which would 404)
+      const proxiedUrl = downloadUrl.startsWith("/v2/")
+        ? `/api${downloadUrl}`          // /v2/agent/download/... → /api/v2/agent/download/...
+        : downloadUrl;
+
+      const pdfRes = await fetch(proxiedUrl);
       if (!pdfRes.ok) throw new Error(`Failed to download PDF (${pdfRes.status})`);
 
       const pdfBlob = await pdfRes.blob();
@@ -145,7 +182,21 @@ function BuilderInner() {
     } finally {
       setIsExportingPdf(false);
     }
-  }, [resumeData]);
+  }, [resumeData, selectedTemplate]);
+
+  // Clear all previous session cache every time the builder loads (fresh start)
+  React.useEffect(() => {
+    // Check for import data BEFORE resetting — preserve it across the reset
+    const importRaw = (() => {
+      try { return sessionStorage.getItem("smartjob_import_resume_data"); } catch { return null; }
+    })();
+    resetResume();
+    // Re-store import data so the next effect can pick it up
+    if (importRaw) {
+      try { sessionStorage.setItem("smartjob_import_resume_data", importRaw); } catch {}
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   React.useEffect(() => {
     try {
@@ -191,7 +242,8 @@ function BuilderInner() {
       { id: 3, label: "Education", icon: GraduationCap },
       { id: 4, label: "Skills", icon: Zap },
       { id: 5, label: "Projects", icon: FolderOpen },
-      { id: 6, label: "Export", icon: Download },
+      { id: 6, label: "Certifications & Awards", icon: Award },
+      { id: 7, label: "Export", icon: Download },
     ],
     []
   );
@@ -311,6 +363,12 @@ function BuilderInner() {
                   addProject,
                   updateProject,
                   removeProject,
+                  addCertification,
+                  updateCertification,
+                  removeCertification,
+                  addAchievement,
+                  updateAchievement,
+                  removeAchievement,
                   atsScore,
                   breakdown,
                   issues,
@@ -373,15 +431,49 @@ function BuilderInner() {
               </span>
             </div>
             <div className="flex items-center gap-3">
-              <button
-                type="button"
-                onClick={() => toast("Only ATS Minimal is available right now")}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#334155] bg-[#1E293B] text-sm text-[#94A3B8] hover:border-[#6366F1] hover:text-white transition-all"
-              >
-                <Layout className="w-3.5 h-3.5" />
-                ATS Minimal
-                <ChevronDown className="w-3.5 h-3.5" />
-              </button>
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setTemplatePickerOpen((v) => !v)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#334155] bg-[#1E293B] text-sm text-[#94A3B8] hover:border-[#6366F1] hover:text-white transition-all"
+                >
+                  <Layout className="w-3.5 h-3.5" />
+                  {TEMPLATE_OPTIONS.find((t) => t.id === selectedTemplate)?.label ?? "Template"}
+                  <ChevronDown className="w-3.5 h-3.5" />
+                </button>
+                <AnimatePresence>
+                  {templatePickerOpen && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -8, scale: 0.97 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: -8, scale: 0.97 }}
+                      transition={{ duration: 0.15 }}
+                      className="absolute right-0 top-full mt-2 z-50 w-72 rounded-xl border border-[#334155] bg-[#1E293B] shadow-2xl overflow-hidden"
+                    >
+                      {TEMPLATE_OPTIONS.map((tpl) => (
+                        <button
+                          key={tpl.id}
+                          type="button"
+                          onClick={() => { setSelectedTemplate(tpl.id); setTemplatePickerOpen(false); }}
+                          className={cn(
+                            "w-full text-left px-4 py-3 border-b border-[#334155] last:border-0 transition-colors",
+                            selectedTemplate === tpl.id
+                              ? "bg-[#6366F1]/15 text-white"
+                              : "text-[#94A3B8] hover:bg-[#243044] hover:text-white"
+                          )}
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="font-medium text-sm">{tpl.label}</span>
+                            {selectedTemplate === tpl.id && <Check className="w-3.5 h-3.5 text-[#6366F1]" />}
+                          </div>
+                          <p className="text-xs mt-0.5 opacity-70">{tpl.tagline}</p>
+                          <p className="text-xs mt-0.5 text-[#6366F1]">Best for: {tpl.best}</p>
+                        </button>
+                      ))}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
               <Button
                 variant="primary"
                 size="sm"
@@ -467,6 +559,12 @@ function renderStepContent(input: {
   addProject: () => void;
   updateProject: (id: string, field: keyof ProjectEntry, value: any) => void;
   removeProject: (id: string) => void;
+  addCertification: () => void;
+  updateCertification: (id: string, field: keyof CertificationEntry, value: any) => void;
+  removeCertification: (id: string) => void;
+  addAchievement: () => void;
+  updateAchievement: (id: string, field: keyof AchievementEntry, value: any) => void;
+  removeAchievement: (id: string) => void;
   atsScore: number;
   breakdown: { keywords: number; contact: number; formatting: number; skills: number };
   issues: Array<{ severity: "high" | "medium" | "low"; text: string; stepIndex?: number }>;
@@ -490,6 +588,12 @@ function renderStepContent(input: {
     addProject,
     updateProject,
     removeProject,
+    addCertification,
+    updateCertification,
+    removeCertification,
+    addAchievement,
+    updateAchievement,
+    removeAchievement,
     atsScore,
     breakdown,
     issues,
@@ -577,28 +681,72 @@ function renderStepContent(input: {
   }
 
   if (activeStep === 1) {
-    const count = (resumeData.summary || "").length;
+    const wordCount = (resumeData.summary || "").trim().split(/\s+/).filter(Boolean).length;
+
+    const ROLE_PRESETS = [
+      "Software Engineer", "Backend Engineer", "Frontend Developer",
+      "Full Stack Developer", "Data Scientist", "Machine Learning Engineer",
+      "DevOps Engineer", "Cloud Engineer", "Flutter Developer",
+      "Android Developer", "iOS Developer", "Data Engineer",
+      "Security Engineer", "Product Engineer", "Site Reliability Engineer",
+    ];
+
     return (
       <div>
-        <h3 className="font-heading font-semibold text-base text-white mb-6">Professional Summary</h3>
-        <textarea
-          className={textArea}
-          rows={6}
-          value={resumeData.summary || ""}
-          onChange={(e) => setSummary(e.target.value)}
-          placeholder="Write a 2-3 sentence professional summary..."
-        />
-        <div className="mt-3 flex items-center justify-between">
-          <span className="text-xs text-[#64748B]">{count} / 400</span>
-          <Button
-            variant="teal"
-            size="sm"
-            icon={<Sparkles className="w-3.5 h-3.5" />}
-            onClick={() => toast("AI generation — coming soon")}
-          >
-            Generate with AI
-          </Button>
+        <h3 className="font-heading font-semibold text-base text-white mb-1">Professional Summary</h3>
+        <p className="text-xs text-[#64748B] mb-4">
+          AI writes from your experience — assertive, metric-driven, zero fluff.
+          Set your target role so the summary speaks directly to that hiring manager.
+        </p>
+
+        {/* ── Role Selector — single full-width input with datalist autocomplete ── */}
+        <div className="mb-4">
+          <label className="block text-xs font-medium text-[#94A3B8] mb-1.5">
+            Target Role <span className="text-[#6366F1]">*</span>
+          </label>
+          <input
+            type="text"
+            list="role-presets-list"
+            className="w-full bg-[#1E293B] border border-[#334155] text-white text-sm rounded-lg px-3 py-2.5 focus:outline-none focus:border-[#6366F1] focus:ring-2 focus:ring-[#6366F1]/20 transition-all placeholder-[#475569]"
+            placeholder="e.g. Backend Engineer, Data Scientist, Full Stack Developer…"
+            value={resumeData.contact.jobTitle || ""}
+            onChange={(e) => updateContact("jobTitle", e.target.value)}
+          />
+          <datalist id="role-presets-list">
+            {ROLE_PRESETS.map((r) => (
+              <option key={r} value={r} />
+            ))}
+          </datalist>
+          {resumeData.contact.jobTitle && (
+            <p className="mt-1.5 text-xs text-[#6366F1]">
+              ✦ Summary will target a <strong>{resumeData.contact.jobTitle}</strong> role — AI will match the exact vocabulary recruiters expect
+            </p>
+          )}
         </div>
+
+        {/* ── Summary Textarea — auto-grow, no artificial limit ── */}
+        <SummaryTextarea
+          value={resumeData.summary || ""}
+          onChange={(text) => setSummary(text)}
+        />
+
+        <div className="mt-2 flex items-center justify-between">
+          <span className="text-xs text-[#64748B]">
+            {wordCount > 0 ? `${wordCount} word${wordCount !== 1 ? "s" : ""}` : "Aim for 60–130 words"}
+          </span>
+          <SummaryGenerateButton
+            resumeData={resumeData}
+            onGenerated={(text) => setSummary(text)}
+          />
+        </div>
+
+        {/* ── AI Transparency Notice (Responsible AI) ── */}
+        <p className="mt-3 text-[10px] text-[#475569] leading-relaxed">
+          ✦ <strong className="text-[#64748B]">AI Disclosure:</strong> Generated by
+          Google Gemini using only the data you entered. Review before use.
+          No data is retained beyond your session.{" "}
+          <a href="/privacy" className="text-[#6366F1] hover:underline">Privacy Policy</a>
+        </p>
       </div>
     );
   }
@@ -696,6 +844,76 @@ function renderStepContent(input: {
     );
   }
 
+  if (activeStep === 6) {
+    const certs = resumeData.certifications || [];
+    const achs = resumeData.achievements || [];
+    return (
+      <div className="flex flex-col gap-6">
+        <div>
+          <h3 className="font-heading font-semibold text-base text-white mb-1 flex items-center gap-2">
+            <Award className="w-4 h-4 text-[#14B8A6]" /> Certifications
+          </h3>
+          <p className="text-xs text-[#64748B] mb-3">AWS, Google, Coursera, NPTEL, LinkedIn Learning, etc. These are strong ATS trust signals.</p>
+          {certs.length === 0 ? (
+            <p className="text-sm text-[#64748B] text-center py-3">No certifications added yet.</p>
+          ) : null}
+          {certs.map((cert) => (
+            <div key={cert.id} className="mb-3 p-3 rounded-xl bg-[#243044] border border-[#334155]">
+              <div className="flex justify-between items-start mb-2">
+                <span className="text-xs font-medium text-[#94A3B8] uppercase tracking-wide">Certification</span>
+                <button onClick={() => removeCertification(cert.id)} className="text-[#64748B] hover:text-red-400 transition-colors" type="button">
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              </div>
+              <div className="grid grid-cols-1 gap-2">
+                <input value={cert.name} onChange={(e) => updateCertification(cert.id, "name", e.target.value)} placeholder="AWS Certified Solutions Architect" className={textInput} />
+                <input value={cert.issuer} onChange={(e) => updateCertification(cert.id, "issuer", e.target.value)} placeholder="Amazon Web Services" className={textInput} />
+                <div className="grid grid-cols-2 gap-2">
+                  <input value={cert.issuedDate} onChange={(e) => updateCertification(cert.id, "issuedDate", e.target.value)} placeholder="May 2024" className={textInput} />
+                  <input value={cert.expiryDate} onChange={(e) => updateCertification(cert.id, "expiryDate", e.target.value)} placeholder="May 2026 (optional)" className={textInput} />
+                </div>
+                <input value={cert.credentialURL} onChange={(e) => updateCertification(cert.id, "credentialURL", e.target.value)} placeholder="Verification URL (optional)" className={textInput} />
+              </div>
+            </div>
+          ))}
+          <button onClick={addCertification} className="w-full py-3 rounded-xl border border-dashed border-[#334155] text-sm text-[#94A3B8] hover:border-[#14B8A6] hover:text-[#14B8A6] transition-colors flex items-center justify-center gap-2" type="button">
+            <Plus className="w-4 h-4" />Add Certification
+          </button>
+        </div>
+
+        <div className="h-px bg-[#334155]" />
+
+        <div>
+          <h3 className="font-heading font-semibold text-base text-white mb-1 flex items-center gap-2">
+            <Trophy className="w-4 h-4 text-[#F59E0B]" /> Achievements & Awards
+          </h3>
+          <p className="text-xs text-[#64748B] mb-3">Hackathon wins, Dean's list, scholarships, patents, publications — these differentiate you.</p>
+          {achs.length === 0 ? (
+            <p className="text-sm text-[#64748B] text-center py-3">No achievements added yet.</p>
+          ) : null}
+          {achs.map((ach) => (
+            <div key={ach.id} className="mb-3 p-3 rounded-xl bg-[#243044] border border-[#334155]">
+              <div className="flex justify-between items-start mb-2">
+                <span className="text-xs font-medium text-[#94A3B8] uppercase tracking-wide">Achievement</span>
+                <button onClick={() => removeAchievement(ach.id)} className="text-[#64748B] hover:text-red-400 transition-colors" type="button">
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              </div>
+              <div className="grid grid-cols-1 gap-2">
+                <input value={ach.title} onChange={(e) => updateAchievement(ach.id, "title", e.target.value)} placeholder="1st Place — Smart India Hackathon 2024" className={textInput} />
+                <input value={ach.description} onChange={(e) => updateAchievement(ach.id, "description", e.target.value)} placeholder="Brief description of the achievement" className={textInput} />
+                <input value={ach.date} onChange={(e) => updateAchievement(ach.id, "date", e.target.value)} placeholder="Month Year (e.g., Oct 2024)" className={textInput} />
+              </div>
+            </div>
+          ))}
+          <button onClick={addAchievement} className="w-full py-3 rounded-xl border border-dashed border-[#334155] text-sm text-[#94A3B8] hover:border-[#F59E0B] hover:text-[#F59E0B] transition-colors flex items-center justify-center gap-2" type="button">
+            <Plus className="w-4 h-4" />Add Achievement
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div>
       <h3 className="font-heading font-semibold text-base text-white mb-6">Export</h3>
@@ -728,13 +946,16 @@ function renderStepContent(input: {
 function computeATSScore(resume: ResumeData): number {
   let score = 0;
   const contactFields: Array<keyof ResumeData["contact"]> = ["name", "email", "phone", "location"];
-  score +=
-    contactFields.filter((f) => (resume.contact[f] || "").trim()).length * (25 / contactFields.length);
+  score += contactFields.filter((f) => (resume.contact[f] || "").trim()).length * (20 / contactFields.length);
   if (resume.summary.trim().length > 50) score += 15;
-  score += Math.min(resume.experience.length, 3) * (25 / 3);
+  score += Math.min(resume.experience.length, 3) * (20 / 3);
   score += Math.min(resume.skills.length, 10) * (20 / 10);
   if (resume.education.length > 0) score += 10;
-  if (resume.projects.length > 0) score += 5;
+  if (resume.projects.length > 0) score += 10;
+  if ((resume.certifications || []).length > 0) score += 5;   // Certs boost ATS score
+  if ((resume.achievements || []).length > 0) score += 3;     // Awards boost score
+  if (resume.contact.github) score += 2;                       // GitHub is expected
+  if (resume.contact.linkedin) score += 2;                     // LinkedIn is expected
   return Math.round(Math.min(score, 100));
 }
 
@@ -768,6 +989,117 @@ function Input({
     </Field>
   );
 }
+
+// ─── Summary Textarea — auto-growing, no scroll ──────────────────────────────
+
+function SummaryTextarea({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const ref = React.useRef<HTMLTextAreaElement>(null);
+
+  // Grow height to fit content — no inner scroll bar
+  React.useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = Math.max(180, el.scrollHeight) + "px";
+  }, [value]);
+
+  return (
+    <textarea
+      ref={ref}
+      className="w-full rounded-lg border border-[#334155] bg-[#243044] px-4 py-3 text-sm text-white placeholder:text-[#64748B] focus:border-[#6366F1] focus:ring-2 focus:ring-[#6366F1]/20 transition-all outline-none resize-y"
+      style={{ minHeight: "180px", overflow: "hidden" }}
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      placeholder="Write a draft or leave blank — AI will craft a confident, role-specific summary tailored to your experience…"
+    />
+  );
+}
+
+// ─── Summary AI Generator Button ─────────────────────────────────────────────
+
+function SummaryGenerateButton({
+  resumeData,
+  onGenerated,
+}: {
+  resumeData: ResumeData;
+  onGenerated: (text: string) => void;
+}) {
+  const [loading, setLoading] = React.useState(false);
+  const [dots, setDots] = React.useState(0);
+
+  // Animated dots while generating
+  React.useEffect(() => {
+    if (!loading) return;
+    const t = setInterval(() => setDots((d) => (d + 1) % 4), 400);
+    return () => clearInterval(t);
+  }, [loading]);
+
+  const hasEnoughData =
+    resumeData.contact.name.trim().length > 0 ||
+    resumeData.skills.length > 0 ||
+    resumeData.experience.length > 0;
+
+  async function handleGenerate() {
+    if (!hasEnoughData) {
+      toast.warning("Add your name, skills, or experience first so AI has something to work with.");
+      return;
+    }
+    setLoading(true);
+    try {
+      const jd = (() => {
+        try { return sessionStorage.getItem("smartjob_jd_for_builder") || ""; }
+        catch { return ""; }
+      })();
+      const { generateSummary } = await import("@/lib/agentApi");
+      const result = await generateSummary({
+        resume_data: resumeData as any,
+        existing_summary: resumeData.summary || "",
+        job_description: jd || undefined,
+        role_title: resumeData.contact.jobTitle || undefined,
+        target_role: resumeData.contact.jobTitle || undefined,
+        consent_given: true,
+      });
+      if (result?.ok && result.summary) {
+        onGenerated(result.summary);
+        toast.success("Summary written by AI ✓ — review and refine as needed");
+      } else {
+        toast.error("AI returned an empty summary — please try again");
+      }
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "AI generation failed");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={handleGenerate}
+      disabled={loading}
+      className={[
+        "flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all",
+        loading
+          ? "bg-[#0D9488]/60 text-white cursor-wait"
+          : "bg-[#0D9488] hover:bg-[#0F766E] text-white cursor-pointer",
+      ].join(" ")}
+    >
+      {loading ? (
+        <>
+          <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+          Writing{".".repeat(dots)}
+        </>
+      ) : (
+        <>
+          <Sparkles className="w-3.5 h-3.5" />
+          Generate with AI
+        </>
+      )}
+    </button>
+  );
+}
+
+// ─── Experience Card ──────────────────────────────────────────────────────────
 
 function ExperienceCard({
   entry,

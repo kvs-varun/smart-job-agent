@@ -44,6 +44,53 @@ export interface ProjectEntry {
   demo: string;
 }
 
+export interface CertificationEntry {
+  id: string;
+  name: string;
+  issuer: string;
+  issuedDate: string;
+  expiryDate: string;
+  credentialID: string;
+  credentialURL: string;
+}
+
+export interface AchievementEntry {
+  id: string;
+  title: string;
+  description: string;
+  date: string;
+}
+
+export interface OpenSourceEntry {
+  id: string;
+  project: string;
+  contribution: string;
+  github: string;
+}
+
+export interface PublicationEntry {
+  id: string;
+  title: string;
+  publisher: string;
+  date: string;
+  url: string;
+}
+
+export interface VolunteeringEntry {
+  id: string;
+  role: string;
+  organization: string;
+  description: string;
+  startDate: string;
+  endDate: string;
+}
+
+export interface LanguageEntry {
+  id: string;
+  language: string;
+  proficiency: string;
+}
+
 export interface ResumeData {
   contact: ContactInfo;
   summary: string;
@@ -51,6 +98,12 @@ export interface ResumeData {
   education: EducationEntry[];
   skills: string[];
   projects: ProjectEntry[];
+  certifications: CertificationEntry[];
+  achievements: AchievementEntry[];
+  openSource: OpenSourceEntry[];
+  publications: PublicationEntry[];
+  volunteering: VolunteeringEntry[];
+  languages: LanguageEntry[];
 }
 
 export const EMPTY_CONTACT: ContactInfo = {
@@ -71,6 +124,12 @@ export const EMPTY_RESUME: ResumeData = {
   education: [],
   skills: [],
   projects: [],
+  certifications: [],
+  achievements: [],
+  openSource: [],
+  publications: [],
+  volunteering: [],
+  languages: [],
 };
 
 export type PreviewResponse = {

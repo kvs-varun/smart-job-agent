@@ -70,7 +70,9 @@ export function Navbar() {
         <nav className="hidden md:flex items-center gap-8">
           <NavLink href="/builder">Builder</NavLink>
           <NavLink href="/jd-match">JD Match</NavLink>
+          <NavLink href="/scorer">Scorer</NavLink>
           <NavLink href="/tracker">Tracker</NavLink>
+          <NavLink href="/auto-apply">Auto-Apply</NavLink>
         </nav>
 
         <div className="hidden md:flex items-center gap-3">
@@ -102,8 +104,14 @@ export function Navbar() {
               <NavLink href="/jd-match">
                 <span className="font-medium text-base">JD Match</span>
               </NavLink>
+              <NavLink href="/scorer">
+                <span className="font-medium text-base">Scorer</span>
+              </NavLink>
               <NavLink href="/tracker">
                 <span className="font-medium text-base">Tracker</span>
+              </NavLink>
+              <NavLink href="/auto-apply">
+                <span className="font-medium text-base">Auto-Apply</span>
               </NavLink>
               <div className="flex flex-col gap-3 pt-2">
                 <Button variant="ghost" size="md" className="w-full" onClick={() => setImportOpen(true)}>

@@ -6,7 +6,9 @@ import { motion } from "framer-motion";
 import {
   Brain,
   ClipboardPaste,
+  Download,
   FileText,
+  Mail,
   Sparkles,
   Target,
   X,
@@ -17,7 +19,9 @@ import { ResumePreview } from "@/components/preview/ResumePreview";
 import { ResumeImporter } from "@/components/importer/ResumeImporter";
 import { Button } from "@/components/ui/Button";
 import { cn } from "@/lib/utils";
-import { analyzeJDMatch } from "@/lib/flaskApi";
+import { analyzeJDMatchV2, generateColdEmailV2, tailorResumeForJD } from "@/lib/agentApi";
+import type { JDMatchDetails, TailoringStep, ColdEmailOutput } from "@/lib/agentApi";
+import { CautionBanner } from "@/components/agents/CautionBanner";
 import { EMPTY_RESUME } from "@/types/resume";
 import type { ResumeData } from "@/types/resume";
 import { useResumeStore } from "@/store/resumeStore";
@@ -33,6 +37,20 @@ export default function JDMatchPage() {
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
   const [diffOpen, setDiffOpen] = React.useState(false);
   const [importOpen, setImportOpen] = React.useState(false);
+  const [emailOpen, setEmailOpen] = React.useState(false);
+  const [emailBusy, setEmailBusy] = React.useState(false);
+  const [coldEmail, setColdEmail] = React.useState<ColdEmailOutput | null>(null);
+  const [recruiterEmail, setRecruiterEmail] = React.useState("");
+  const [companyName, setCompanyName] = React.useState("");
+  const [roleTitleInput, setRoleTitleInput] = React.useState("");
+  const [v2MatchDetails, setV2MatchDetails] = React.useState<JDMatchDetails | null>(null);
+  const [tailoringPlan, setTailoringPlan] = React.useState<TailoringStep[]>([]);
+  const [cautionDismissed, setCautionDismissed] = React.useState(false);
+  const [proceedDespiteCaution, setProceedDespiteCaution] = React.useState(false);
+  const [tailorBusy, setTailorBusy] = React.useState(false);
+  const [tailoredResumeData, setTailoredResumeData] = React.useState<ResumeData | null>(null);
+  const [tailoredDownloadUrl, setTailoredDownloadUrl] = React.useState<string | null>(null);
+  const [tailorComplete, setTailorComplete] = React.useState(false);
 
   const [matchScore, setMatchScore] = React.useState<number>(0);
   const [jobSkills, setJobSkills] = React.useState<string[]>([]);
@@ -49,80 +67,124 @@ export default function JDMatchPage() {
   const storeResumeData = useResumeStore((s) => s.resumeData);
 
   async function onAnalyze() {
-    if (!jdText.trim()) {
-      toast("Paste a job description first.");
-      return;
-    }
-    if (!resumeText.trim()) {
-      toast("Upload your resume first.");
-      return;
-    }
+    if (!jdText.trim()) { toast("Paste a job description first."); return; }
+    if (!resumeText.trim()) { toast("Upload your resume first."); return; }
     setBusy(true);
     setErrorMessage(null);
+    setTailorComplete(false);
+    setTailoredResumeData(null);
+    setTailoredDownloadUrl(null);
     try {
-      const resp = await analyzeJDMatch(storeResumeData, jdText);
+      // V2 Agent 3 — deep LLM-powered JD analysis using structured resume data
+      const resp = await analyzeJDMatchV2({
+        resume_text: resumeText,
+        job_description: jdText,
+      });
+      const details = resp.jd_match_details || {} as any;
 
-      console.log("JDMatch analyzeJDMatch response:", resp);
-      console.log("JDMatch analyzeJDMatch response.llm:", (resp as any)?.llm);
+      setMatchScore(Math.round(resp.match_score ?? 0));
+      setMatchedSkills((details.matched_skills || []).filter(Boolean));
+      setMissingSkills((details.missing_skills || []).filter(Boolean));
+      setAdditionalSkills([]);
+      setJobSkills([...(details.matched_skills || []), ...(details.missing_skills || [])]);
 
-      const anyResp = resp as any;
-      const llm = (anyResp.llm || anyResp.llm_result || anyResp.llmResult || {}) as any;
-
-      const scoreRaw =
-        llm.match_score ??
-        llm.matchScore ??
-        llm.match_percentage ??
-        llm.matchPercentage ??
-        llm.score ??
-        llm.match ??
-        anyResp.match_score ??
-        anyResp.matchScore ??
-        anyResp.match_percentage ??
-        anyResp.matchPercentage ??
-        anyResp.score ??
-        0;
-      const scoreNum = typeof scoreRaw === "number" ? scoreRaw : Number(scoreRaw);
-
-      const matched =
-        (llm.matched_skills || llm.matchedSkills || llm.matched || llm.skills_matched || llm.skillsMatched || []) as string[];
-      const missing =
-        (llm.missing_skills || llm.missingSkills || llm.missing || llm.skills_missing || llm.skillsMissing || []) as string[];
-      const additional =
-        (llm.additional_skills || llm.additionalSkills || llm.additional || llm.extra_skills || llm.extraSkills || []) as string[];
-
-      const keywordAnalysis = (anyResp.keyword_analysis || anyResp.keywordAnalysis || {}) as any;
-      const resumeKw = (keywordAnalysis.resume_keywords || keywordAnalysis.resumeKeywords || []) as string[];
-      const jdKw = (keywordAnalysis.jd_keywords || keywordAnalysis.jdKeywords || []) as string[];
-      const overlapKw = (keywordAnalysis.overlap || keywordAnalysis.overlap_keywords || keywordAnalysis.overlapKeywords || []) as string[];
-      const gapsKw =
-        (anyResp.keyword_gaps || anyResp.keywordGaps || keywordAnalysis.gaps || keywordAnalysis.gap_keywords || keywordAnalysis.gapKeywords || keywordAnalysis.keyword_gaps || keywordAnalysis.keywordGaps || []) as string[];
-
-      setMatchScore(Math.max(0, Math.min(100, Math.round(Number.isFinite(scoreNum) ? scoreNum : 0))));
-      setMatchedSkills((matched || []).filter(Boolean));
-      setMissingSkills((missing || []).filter(Boolean));
-      setAdditionalSkills((additional || []).filter(Boolean));
-
-      const allSkills = new Set<string>();
-      for (const s of matched || []) allSkills.add(s);
-      for (const s of missing || []) allSkills.add(s);
-      for (const s of additional || []) allSkills.add(s);
-      setJobSkills(Array.from(allSkills));
-
-      setResumeKeywords((resumeKw || []).filter(Boolean));
-      setJdKeywords((jdKw || []).filter(Boolean));
-      setKeywordOverlap((overlapKw || []).filter(Boolean));
-      setKeywordGaps((gapsKw || []).filter(Boolean));
-      setRecommendations(((anyResp.recommendations || anyResp.recommendation || anyResp.recs || []) as string[]).filter(Boolean));
-
+      // Agent 3 returns keyword breakdown in details
+      setJdKeywords((details.missing_skills || []).filter(Boolean));
+      setResumeKeywords((details.matched_skills || []).filter(Boolean));
+      setKeywordOverlap((details.matched_skills || []).filter(Boolean));
+      setKeywordGaps((details.missing_skills || []).filter(Boolean));
+      setRecommendations((details.recommendations || []).filter(Boolean));
+      setV2MatchDetails(details as JDMatchDetails);
+      setTailoringPlan(resp.tailoring_plan ?? []);
+      setCautionDismissed(false);
+      setProceedDespiteCaution(false);
       setAnalyzed(true);
-      toast("JD match analysis ready");
+      toast.success(`JD analysis complete — ${Math.round(resp.match_score ?? 0)}% match`);
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Failed to analyze job match";
       setErrorMessage(msg);
       setAnalyzed(false);
-      toast(msg);
+      toast.error(msg);
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function onAutoTailor() {
+    if (!jdText.trim() || !resumeText.trim()) {
+      toast.warning("Upload a resume and paste a job description first.");
+      return;
+    }
+    setTailorBusy(true);
+    setTailorComplete(false);
+    setTailoredResumeData(null);
+    setTailoredDownloadUrl(null);
+    try {
+      toast("AI agents rewriting your resume for this JD — ~20 seconds…");
+      const resp = await tailorResumeForJD({
+        resume_data: resumeData as any,
+        job_description: jdText,
+        selected_template: "ats_pro",
+      });
+
+      if (resp?.final_resume) {
+        setTailoredResumeData(resp.final_resume as ResumeData);
+        // Update store so builder gets the tailored resume
+        useResumeStore.getState().importResumeData(resp.final_resume as ResumeData);
+      }
+      if (resp?.download_url) {
+        const url = resp.download_url.startsWith("/v2/")
+          ? `/api${resp.download_url}`
+          : resp.download_url;
+        setTailoredDownloadUrl(url);
+      }
+      if (resp?.jd_match_score != null) {
+        setMatchScore(Math.round(resp.jd_match_score));
+      }
+      if (resp?.jd_match_details) {
+        setV2MatchDetails(resp.jd_match_details as JDMatchDetails);
+        setMatchedSkills(((resp.jd_match_details as any).matched_skills || []).filter(Boolean));
+        setMissingSkills(((resp.jd_match_details as any).missing_skills || []).filter(Boolean));
+        setRecommendations(((resp.jd_match_details as any).recommendations || []).filter(Boolean));
+      }
+      if (resp?.tailoring_plan) {
+        setTailoringPlan(resp.tailoring_plan as TailoringStep[]);
+      }
+      setTailorComplete(true);
+      setAnalyzed(true);
+      toast.success("Resume rewritten for this JD ✓ — preview updated on the right");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Resume tailor failed — check backend");
+    } finally {
+      setTailorBusy(false);
+    }
+  }
+
+  async function onWriteEmail() {
+    if (!resumeText.trim()) {
+      toast("Upload your resume first.");
+      return;
+    }
+    setEmailOpen(true);
+  }
+
+  async function onGenerateColdEmail() {
+    if (!recruiterEmail.trim()) { toast("Enter recruiter email."); return; }
+    if (!companyName.trim())    { toast("Enter company name.");     return; }
+    setEmailBusy(true);
+    try {
+      const resp = await generateColdEmailV2({
+        resume_text: resumeText,
+        recruiter_email: recruiterEmail,
+        company_name: companyName,
+        role_title: roleTitleInput || "Software Engineer",
+        job_description: jdText || undefined,
+      });
+      setColdEmail(resp);
+    } catch (e) {
+      toast(e instanceof Error ? e.message : "Failed to generate email");
+    } finally {
+      setEmailBusy(false);
     }
   }
 
@@ -232,6 +294,17 @@ export default function JDMatchPage() {
               {analyzed ? (
                 <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.25 }} className="grid gap-6">
                   <JDMatchScoreCard score={matchScore} label={matchLabel} />
+
+                  {v2MatchDetails?.caution_issued && !cautionDismissed && !proceedDespiteCaution && (
+                    <CautionBanner
+                      matchScore={matchScore}
+                      callbackProbability={v2MatchDetails.callback_probability_pct}
+                      cautionMessage={v2MatchDetails.caution_message}
+                      hardGaps={v2MatchDetails.hard_gaps}
+                      onOverride={() => { setProceedDespiteCaution(true); setDiffOpen(true); }}
+                      onDismiss={() => setCautionDismissed(true)}
+                    />
+                  )}
 
                   <div className="mt-0 bg-[#1E293B] rounded-xl border border-[#334155] overflow-hidden">
                     <div className="px-4 py-3 border-b border-[#334155]">
@@ -413,26 +486,38 @@ export default function JDMatchPage() {
                   variant="primary"
                   size="lg"
                   icon={<Sparkles className="w-4 h-4" />}
-                  onClick={() => setDiffOpen(true)}
-                  disabled={!analyzed}
+                  onClick={onAutoTailor}
+                  loading={tailorBusy}
+                  disabled={!resumeText.trim() || !jdText.trim() || tailorBusy}
                   type="button"
                 >
-                  Auto-Tailor My Resume
+                  {tailorBusy ? "AI Rewriting Resume…" : tailorComplete ? "Rewrite Again for this JD" : "Rewrite Resume for this JD ✦"}
                 </Button>
+                {tailoredDownloadUrl && (
+                  <a href={tailoredDownloadUrl} download className="w-full">
+                    <Button variant="teal" size="lg" icon={<FileText className="w-4 h-4" />} className="w-full">
+                      Download Tailored PDF
+                    </Button>
+                  </a>
+                )}
                 <Button
-                  variant="teal"
+                  variant="ghost"
                   size="lg"
                   icon={<FileText className="w-4 h-4" />}
-                  onClick={() => toast("Generate cover letter — coming soon")}
-                  disabled={!analyzed}
+                  onClick={() => {
+                    if (!resumeText.trim()) { toast("Upload your resume first."); return; }
+                    try { sessionStorage.setItem("smartjob_jd_for_builder", jdText); } catch {}
+                    window.location.href = "/builder";
+                  }}
+                  disabled={!resumeText}
                   type="button"
                 >
-                  Generate Cover Letter
+                  Open in Builder →
                 </Button>
                 <Button
                   variant="ghost"
                   size="lg"
-                  onClick={() => toast("Write outreach email — coming soon")}
+                  onClick={onWriteEmail}
                   disabled={!analyzed}
                   type="button"
                 >
@@ -445,13 +530,34 @@ export default function JDMatchPage() {
 
         <section className="w-[380px] flex-shrink-0 border-l border-[#334155] bg-[#0F172A] overflow-hidden hidden lg:block">
           <div className="h-14 flex items-center justify-between px-4 border-b border-[#334155]">
-            <div className="text-sm font-semibold text-white">Your Resume</div>
-            <div className="text-xs text-[#64748B]">Preview</div>
+            <div className="text-sm font-semibold text-white">
+              {tailorComplete ? (
+                <span className="flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 inline-block" />
+                  JD-Tailored Resume
+                </span>
+              ) : "Your Resume"}
+            </div>
+            {tailoredDownloadUrl && (
+              <a
+                href={tailoredDownloadUrl}
+                download
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#0D9488] hover:bg-[#0F766E] text-white text-xs font-medium transition-colors"
+              >
+                ↓ Download PDF
+              </a>
+            )}
           </div>
 
           <div className="h-[calc(100%-56px)] overflow-y-auto p-4">
+            {tailorComplete && tailoredResumeData ? (
+              <div className="mb-3 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-xs text-emerald-400">
+                ✓ Resume fully rewritten by AI to match this JD. Skills, bullets, and summary are now
+                aligned to the job requirements.
+              </div>
+            ) : null}
             <div className="w-full shadow-2xl rounded-lg overflow-hidden">
-              <ResumePreview data={resumeData} />
+              <ResumePreview data={tailoredResumeData ?? resumeData} />
             </div>
           </div>
         </section>
@@ -502,34 +608,128 @@ export default function JDMatchPage() {
                 </Dialog.Close>
               </div>
 
-              <div className="mt-4 rounded-xl border border-[#334155] bg-[#243044]/40 p-4">
-                <div className="text-xs text-[#64748B] uppercase tracking-wider font-semibold">Diff preview</div>
-                <div className="mt-3 space-y-3 text-sm">
-                  <div>
-                    <div className="text-[#FCA5A5] line-through">Built an API for a college project.</div>
-                    <div className="text-[#86EFAC]">Built a Flask REST API with validation and SQL-backed storage; improved response times by 20%.</div>
-                  </div>
-                  <div>
-                    <div className="text-[#FCA5A5] line-through">Worked on backend tasks.</div>
-                    <div className="text-[#86EFAC]">Implemented JWT auth, unit tests, and dockerized local dev workflow for reliable deployments.</div>
-                  </div>
+              {tailoringPlan.length > 0 ? (
+                <div className="mt-4 space-y-3 max-h-80 overflow-y-auto">
+                  {tailoringPlan.map((step, i) => (
+                    <div key={i} className="rounded-xl border border-[#334155] bg-[#243044]/40 p-4">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-xs bg-[#6366F1]/20 text-[#A5B4FC] px-2 py-0.5 rounded-full font-medium">{step.section}</span>
+                        <span className="text-xs text-[#64748B]">{step.action}</span>
+                      </div>
+                      <p className="text-sm text-[#E2E8F0]">{step.specific_change}</p>
+                    </div>
+                  ))}
                 </div>
-              </div>
+              ) : (
+                <div className="mt-4 rounded-xl border border-[#334155] bg-[#243044]/40 p-4">
+                  <div className="text-xs text-[#64748B] uppercase tracking-wider font-semibold">Tailoring plan</div>
+                  <p className="text-sm text-[#94A3B8] mt-2">No tailoring steps generated. Run Auto-Tailor again with more detailed JD text.</p>
+                </div>
+              )}
 
               <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-end">
-                <Button variant="ghost" onClick={() => setDiffOpen(false)}>
-                  Cancel
-                </Button>
+                <Button variant="ghost" onClick={() => setDiffOpen(false)}>Close</Button>
                 <Button
                   variant="primary"
                   onClick={() => {
-                    toast("Accepted tailoring (demo). Use Builder integration next.");
+                    toast("Tailoring plan copied. Apply these changes in the Builder.");
                     setDiffOpen(false);
                   }}
                 >
-                  Accept All
+                  Go to Builder →
                 </Button>
               </div>
+            </motion.div>
+          </Dialog.Content>
+        </Dialog.Portal>
+      </Dialog.Root>
+      {/* Cold Email Dialog */}
+      <Dialog.Root open={emailOpen} onOpenChange={(open) => { setEmailOpen(open); if (!open) setColdEmail(null); }}>
+        <Dialog.Portal>
+          <Dialog.Overlay className="fixed inset-0 bg-black/60" />
+          <Dialog.Content asChild>
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.97, y: 10 }}
+              transition={{ duration: 0.2 }}
+              className="fixed left-1/2 top-1/2 w-[calc(100vw-32px)] max-w-2xl -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-[#334155] bg-[#1E293B] p-6 shadow-2xl max-h-[90vh] overflow-y-auto"
+            >
+              <div className="flex items-center justify-between mb-4">
+                <Dialog.Title className="font-heading font-bold text-lg text-white">Write Outreach Email</Dialog.Title>
+                <Dialog.Close asChild>
+                  <button className="text-[#94A3B8] hover:text-white"><X className="w-5 h-5" /></button>
+                </Dialog.Close>
+              </div>
+
+              {!coldEmail ? (
+                <div className="space-y-4">
+                  <div>
+                    <label className="text-xs text-[#64748B] uppercase tracking-wider font-semibold block mb-1.5">Recruiter Email *</label>
+                    <input
+                      type="email"
+                      value={recruiterEmail}
+                      onChange={(e) => setRecruiterEmail(e.target.value)}
+                      placeholder="recruiter@company.com"
+                      className="w-full rounded-xl border border-[#334155] bg-[#243044] px-4 py-3 text-sm text-white placeholder:text-[#64748B] focus:border-[#6366F1] outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-[#64748B] uppercase tracking-wider font-semibold block mb-1.5">Company Name *</label>
+                    <input
+                      type="text"
+                      value={companyName}
+                      onChange={(e) => setCompanyName(e.target.value)}
+                      placeholder="Razorpay, Google, etc."
+                      className="w-full rounded-xl border border-[#334155] bg-[#243044] px-4 py-3 text-sm text-white placeholder:text-[#64748B] focus:border-[#6366F1] outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-[#64748B] uppercase tracking-wider font-semibold block mb-1.5">Role Title</label>
+                    <input
+                      type="text"
+                      value={roleTitleInput}
+                      onChange={(e) => setRoleTitleInput(e.target.value)}
+                      placeholder="Software Engineer"
+                      className="w-full rounded-xl border border-[#334155] bg-[#243044] px-4 py-3 text-sm text-white placeholder:text-[#64748B] focus:border-[#6366F1] outline-none"
+                    />
+                  </div>
+                  <Button variant="primary" size="lg" className="w-full" loading={emailBusy} onClick={onGenerateColdEmail}>
+                    Generate Email with AI
+                  </Button>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <div className="rounded-xl border border-[#334155] bg-[#243044]/40 p-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-xs text-[#64748B] uppercase tracking-wider font-semibold">Subject</span>
+                      <span className="text-xs bg-[#6366F1]/20 text-[#A5B4FC] px-2 py-0.5 rounded-full">{coldEmail.framework}</span>
+                      <span className="text-xs bg-teal/20 text-teal px-2 py-0.5 rounded-full">{coldEmail.word_count} words</span>
+                    </div>
+                    <p className="text-sm font-semibold text-white">{coldEmail.subject}</p>
+                  </div>
+                  <div className="rounded-xl border border-[#334155] bg-[#243044]/40 p-4">
+                    <div className="text-xs text-[#64748B] uppercase tracking-wider font-semibold mb-2">Body</div>
+                    <pre className="text-sm text-[#E2E8F0] whitespace-pre-wrap font-sans leading-relaxed">{coldEmail.body}</pre>
+                  </div>
+                  {coldEmail.cliches_found?.length > 0 && (
+                    <div className="rounded-xl border border-amber-400/30 bg-amber-400/5 p-3">
+                      <p className="text-xs text-amber-400 font-semibold">AI clichés removed: {coldEmail.cliches_found.join(", ")}</p>
+                    </div>
+                  )}
+                  <div className="flex gap-3 flex-wrap">
+                    <a href={coldEmail.mailto_link} className="flex-1">
+                      <Button variant="primary" size="lg" className="w-full" icon={<Mail className="w-4 h-4" />}>Open in Mail</Button>
+                    </a>
+                    <a href={coldEmail.gmail_url} target="_blank" rel="noopener noreferrer" className="flex-1">
+                      <Button variant="teal" size="lg" className="w-full">Open in Gmail</Button>
+                    </a>
+                  </div>
+                  <Button variant="ghost" size="sm" className="w-full" onClick={() => setColdEmail(null)}>
+                    Regenerate
+                  </Button>
+                </div>
+              )}
             </motion.div>
           </Dialog.Content>
         </Dialog.Portal>

@@ -1,0 +1,26 @@
+{
+  "version": "1.0",
+  "signals": {
+    "strong": [
+      "Clear one-page resume",
+      "Projects with tech stack + outcomes",
+      "GitHub link and deployed demos (if available)",
+      "Internship / training (honestly stated)",
+      "Skills aligned to JD keywords"
+    ],
+    "weak": [
+      "Generic objective",
+      "Long paragraphs",
+      "Unverifiable claims",
+      "Buzzword stuffing",
+      "Too many unrelated skills"
+    ]
+  },
+  "ats_notes": [
+    "Use standard headings: SUMMARY, SKILLS, PROJECTS, EXPERIENCE, EDUCATION",
+    "Avoid tables, icons, columns; keep single-column",
+    "Place key skills near top",
+    "Mirror JD wording for matched skills (without lying)",
+    "Quantify impact only if it exists in the original content"
+  ]
+}

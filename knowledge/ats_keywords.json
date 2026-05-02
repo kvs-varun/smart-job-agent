@@ -1,0 +1,49 @@
+{
+  "version": "1.0",
+  "notes": "Curated ATS keywords for Indian IT fresher roles. This is not scraped; it's a maintained taxonomy.",
+  "roles": {
+    "backend_fresher": {
+      "title_variants": ["Backend Developer", "Software Engineer", "Python Developer", "Java Developer"],
+      "must_have": ["data structures", "algorithms", "oops", "sql", "rest api", "git"],
+      "good_to_have": ["flask", "django", "fastapi", "docker", "aws", "unit testing", "linux"],
+      "tools": ["postgresql", "mysql", "redis", "jwt", "postman"],
+      "synonyms": {
+        "rest api": ["restful services", "api development", "http api"],
+        "sql": ["mysql", "postgresql", "relational database"],
+        "unit testing": ["pytest", "junit", "tests"],
+        "aws": ["cloud", "ec2", "s3"]
+      }
+    },
+    "frontend_fresher": {
+      "title_variants": ["Frontend Developer", "React Developer", "Web Developer"],
+      "must_have": ["html", "css", "javascript", "react", "git"],
+      "good_to_have": ["typescript", "redux", "responsive design", "rest api", "testing"],
+      "tools": ["vite", "webpack", "npm", "eslint"],
+      "synonyms": {
+        "javascript": ["js", "ecmascript"],
+        "responsive design": ["mobile-first", "responsive ui"],
+        "testing": ["jest", "react testing library"]
+      }
+    },
+    "flutter_fresher": {
+      "title_variants": ["Flutter Developer", "Mobile Developer"],
+      "must_have": ["dart", "flutter", "api integration", "git"],
+      "good_to_have": ["firebase", "state management", "rest api", "play store"],
+      "tools": ["android studio", "flutterflow"],
+      "synonyms": {
+        "state management": ["provider", "bloc", "riverpod"],
+        "api integration": ["rest api", "http", "dio"]
+      }
+    },
+    "data_fresher": {
+      "title_variants": ["Data Analyst", "Data Engineer", "ML Engineer (Fresher)"],
+      "must_have": ["python", "sql", "statistics", "data cleaning"],
+      "good_to_have": ["pandas", "numpy", "machine learning", "power bi", "excel"],
+      "tools": ["jupyter", "matplotlib", "sklearn"],
+      "synonyms": {
+        "machine learning": ["ml", "supervised learning", "classification", "regression"],
+        "data cleaning": ["data preprocessing", "data wrangling"]
+      }
+    }
+  }
+}
